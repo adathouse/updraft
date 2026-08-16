@@ -37,7 +37,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 var connectionString = builder.Configuration.GetConnectionString("Updraft")
-	?? "Host=localhost;Port=5432;Database=updraft;Username=postgres;Password=postgres";
+	?? "Host=db;Port=5432;Database=updraft;Username=updraft;Password=updraft";
 
 builder.Services.AddDbContext<UpdraftDbContext>(options => options.UseNpgsql(connectionString));
 
@@ -59,25 +59,25 @@ builder.Services.AddScoped<RequestService>();
 IRequestExecutorBuilder graphQl = 
     builder.Services
 	.AddGraphQLServer()
-//	.AddAuthorization()
+	//.AddAuthorization()
 	.AddFiltering()
 	.AddSorting()
 	.AddProjections()
 	.AddQueryConventions()
 	.AddGlobalObjectIdentification()
-	.AddApplicationService<IAttachmentRepository>()
-	.AddApplicationService<ICommitteeRepository>()
-	.AddApplicationService<IDraftRepository>()
-	.AddApplicationService<IJobRepository>()
-	.AddApplicationService<INoteRepository>()
-	.AddApplicationService<IOfficeRepository>()
-	.AddApplicationService<IRequestRepository>()
-	.AddApplicationService<ITagRepository>()
-	.AddApplicationService<IUserRepository>()
-	.AddApplicationService<DraftService>()
-	.AddApplicationService<JobService>()
-	.AddApplicationService<NoteService>()
-	.AddApplicationService<RequestService>()
+	// .AddApplicationService<IAttachmentRepository>()
+	// .AddApplicationService<ICommitteeRepository>()
+	// .AddApplicationService<IDraftRepository>()
+	// .AddApplicationService<IJobRepository>()
+	// .AddApplicationService<INoteRepository>()
+	// .AddApplicationService<IOfficeRepository>()
+	// .AddApplicationService<IRequestRepository>()
+	// .AddApplicationService<ITagRepository>()
+	// .AddApplicationService<IUserRepository>()
+	// .AddApplicationService<DraftService>()
+	// .AddApplicationService<JobService>()
+	// .AddApplicationService<NoteService>()
+	// .AddApplicationService<RequestService>()
 	.AddUpdraftTypes();
 
 var app = builder.Build();
