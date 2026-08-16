@@ -8,5 +8,11 @@ CREATE ROLE updraft PASSWORD 'updraft' LOGIN;
 GRANT USAGE ON SCHEMA updraft TO updraft;
 GRANT ALL PRIVILEGES ON SCHEMA updraft TO updraft; 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
-CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+```
+export PGUSER=updraft
+export PGPASSWORD=updraft
+export PGDATABASE=updraft
+export PGHOST=db
 ```
