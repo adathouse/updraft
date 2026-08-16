@@ -1,18 +1,33 @@
 # updraft
 
-```
-CREATE DATABASE updraft;
-\connect updraft;
-CREATE SCHEMA IF NOT EXISTS updraft;
-CREATE ROLE updraft PASSWORD 'updraft' LOGIN;
-GRANT USAGE ON SCHEMA updraft TO updraft;
-GRANT ALL PRIVILEGES ON SCHEMA updraft TO updraft; 
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+## Database bootstrap
+
+Run the bootstrap SQL as a superuser to create the application role, database, schema, and grants.
+
+```bash
+psql -v ON_ERROR_STOP=1 -f db/bootstrap.sql
 ```
 
-```
+## Connection environment
+
+```bash
 export PGUSER=updraft
 export PGPASSWORD=updraft
 export PGDATABASE=updraft
 export PGHOST=db
+export PGPORT=5432
+```
+
+## Flyway migration
+
+Apply schema migrations with Flyway.
+
+```bash
+cd flyway; flyway migrate
+```
+
+Check migration state.
+
+```bash
+cd flyway; flyway info
 ```

@@ -44,6 +44,12 @@ apphost
 .env.*
 appsettings.Local.json
 
+# Flyway local/runtime files
+flyway/*.local.conf
+flyway/flyway.conf.local
+flyway/logs/
+flyway/conf/
+
 # OS files
 .DS_Store
 Thumbs.db
