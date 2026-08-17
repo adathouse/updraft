@@ -6,6 +6,10 @@ namespace Updraft.Types;
 [ObjectType<Draft>]
 public static partial class DraftObjectType
 {
+    [NodeResolver]
+    public static Task<Draft?> GetDraftByIdAsync(Guid id, IDraftRepository draftRepository, CancellationToken cancellationToken) =>
+        draftRepository.GetByIdAsync(id, cancellationToken);
+
     [UsePaging]
     [UseFiltering]
     [UseSorting]

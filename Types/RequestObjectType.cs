@@ -7,6 +7,10 @@ namespace Updraft.Types;
 [ObjectType<Request>]
 public static partial class RequestObjectType
 {
+    [NodeResolver]
+    public static Task<Request?> GetRequestByIdAsync(Guid id, IRequestRepository requestRepository, CancellationToken cancellationToken) =>
+        requestRepository.GetByIdAsync(id, cancellationToken);
+
     [UsePaging]
     [UseFiltering]
     [UseSorting]
