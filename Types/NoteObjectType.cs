@@ -3,9 +3,14 @@ using Updraft.Repositories;
 
 namespace Updraft.Types;
 
+[Node(IdField = nameof(Note.NoteId))]
 [ObjectType<Note>]
 public static partial class NoteObjectType
 {
+    [NodeResolver]
+    public static Task<Note?> GetNoteByIdAsync(Guid id, INoteRepository noteRepository, CancellationToken cancellationToken) =>
+        noteRepository.GetByIdAsync(id, cancellationToken);
+
     [UsePaging]
     [UseFiltering]
     [UseSorting]

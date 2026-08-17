@@ -3,9 +3,14 @@ using Updraft.Repositories;
 
 namespace Updraft.Types;
 
+[Node(IdField = nameof(Draft.DraftId))]
 [ObjectType<Draft>]
 public static partial class DraftObjectType
 {
+    [NodeResolver]
+    public static Task<Draft?> GetDraftByIdAsync(Guid id, IDraftRepository draftRepository, CancellationToken cancellationToken) =>
+        draftRepository.GetByIdAsync(id, cancellationToken);
+
     [UsePaging]
     [UseFiltering]
     [UseSorting]

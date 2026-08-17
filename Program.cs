@@ -1,4 +1,3 @@
-using HotChocolate.Execution.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -56,28 +55,14 @@ builder.Services.AddScoped<JobService>();
 builder.Services.AddScoped<NoteService>();
 builder.Services.AddScoped<RequestService>();
 
-IRequestExecutorBuilder graphQl = 
-    builder.Services
+builder.Services
 	.AddGraphQLServer()
-	//.AddAuthorization()
+	.AddAuthorizationCore()
 	.AddFiltering()
 	.AddSorting()
 	.AddProjections()
 	.AddQueryConventions()
 	.AddGlobalObjectIdentification()
-	// .AddApplicationService<IAttachmentRepository>()
-	// .AddApplicationService<ICommitteeRepository>()
-	// .AddApplicationService<IDraftRepository>()
-	// .AddApplicationService<IJobRepository>()
-	// .AddApplicationService<INoteRepository>()
-	// .AddApplicationService<IOfficeRepository>()
-	// .AddApplicationService<IRequestRepository>()
-	// .AddApplicationService<ITagRepository>()
-	// .AddApplicationService<IUserRepository>()
-	// .AddApplicationService<DraftService>()
-	// .AddApplicationService<JobService>()
-	// .AddApplicationService<NoteService>()
-	// .AddApplicationService<RequestService>()
 	.AddUpdraftTypes();
 
 var app = builder.Build();

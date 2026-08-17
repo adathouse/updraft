@@ -8,14 +8,14 @@ namespace Updraft.Types;
 [QueryType]
 public static partial class Query
 {
-    //[Authorize(Policy = AuthorizationPolicies.FrontOffice)]
+    [Authorize(Policy = AuthorizationPolicies.FrontOffice)]
     [UsePaging]
     [UseFiltering]
     [UseSorting]
     public static IQueryable<Request> GetUnassignedRequests(IRequestRepository requestRepository) =>
         requestRepository.Query().Where(x => x.Status == RequestStatus.Unassigned);
 
-    //[Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
+    [Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
     [UsePaging]
     [UseFiltering]
     [UseSorting]
@@ -24,11 +24,11 @@ public static partial class Query
             ? jobRepository.Query().Where(x => x.Status == JobStatus.Open && x.AssigneeId == assigneeId.Value)
             : jobRepository.Query().Where(x => x.Status == JobStatus.Open);
 
-    //[Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
+    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     public static Task<Job?> GetJobByIdAsync(Guid jobId, IJobRepository jobRepository, CancellationToken cancellationToken) =>
         jobRepository.GetByIdAsync(jobId, cancellationToken);
 
-    //[Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
+    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [UsePaging]
     [UseFiltering]
     [UseSorting]
