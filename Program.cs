@@ -57,7 +57,7 @@ builder.Services.AddScoped<RequestService>();
 
 builder.Services
 	.AddGraphQLServer()
-	.AddAuthorizationCore()
+	//.AddAuthorizationCore()
 	.AddFiltering()
 	.AddSorting()
 	.AddProjections()

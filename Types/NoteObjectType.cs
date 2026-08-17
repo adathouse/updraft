@@ -3,7 +3,6 @@ using Updraft.Repositories;
 
 namespace Updraft.Types;
 
-[Node(IdField = nameof(Note.NoteId))]
 [ObjectType<Note>]
 public static partial class NoteObjectType
 {

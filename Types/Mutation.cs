@@ -9,7 +9,7 @@ namespace Updraft.Types;
 [MutationType]
 public static partial class Mutation
 {
-    [Authorize(Policy = AuthorizationPolicies.Requester)]
+    //[Authorize(Policy = AuthorizationPolicies.Requester)]
     public static Task<Request> RequestDraftAsync(
         CreateRequestInput input,
         RequestService requestService,
@@ -34,7 +34,7 @@ public static partial class Mutation
                     .ToList()),
             cancellationToken);
 
-    [Authorize(Policy = AuthorizationPolicies.FrontOffice)]
+    //[Authorize(Policy = AuthorizationPolicies.FrontOffice)]
     public static Task<Job> CreateJobAsync(
         CreateJobInput input,
         JobService jobService,
@@ -43,7 +43,7 @@ public static partial class Mutation
             new CreateJobCommand(input.RequestId, input.AssigneeId, input.Description),
             cancellationToken);
 
-    [Authorize(Policy = AuthorizationPolicies.Drafter)]
+    //[Authorize(Policy = AuthorizationPolicies.Drafter)]
     public static Task<Draft> SubmitDraftAsync(
         SubmitDraftInput input,
         DraftService draftService,
@@ -57,7 +57,7 @@ public static partial class Mutation
                     .ToList()),
             cancellationToken);
 
-    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
+    //[Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     public static Task<Note> AddNoteAsync(
         AddNoteInput input,
         NoteService noteService,
@@ -66,7 +66,7 @@ public static partial class Mutation
             new AddNoteCommand(input.Text, input.RequestId, input.JobId, input.DraftId),
             cancellationToken);
 
-    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
+    //[Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     public static Task<Note> ReplyToNoteAsync(
         ReplyToNoteInput input,
         NoteService noteService,

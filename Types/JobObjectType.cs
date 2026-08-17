@@ -3,7 +3,6 @@ using Updraft.Repositories;
 
 namespace Updraft.Types;
 
-[Node(IdField = nameof(Job.JobId))]
 [ObjectType<Job>]
 public static partial class JobObjectType
 {
