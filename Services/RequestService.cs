@@ -24,7 +24,6 @@ public sealed record CreateRequestCommand(
 public sealed class RequestService(
     IRequestRepository requestRepository,
     IOfficeRepository officeRepository,
-    ICommitteeRepository committeeRepository,
     ITagRepository tagRepository)
 {
     public async Task<Request> CreateRequestAsync(CreateRequestCommand command, CancellationToken cancellationToken)
@@ -32,12 +31,6 @@ public sealed class RequestService(
         if (!await officeRepository.ExistsAsync(command.OfficeId, cancellationToken))
         {
             throw new InvalidOperationException("Office was not found.");
-        }
-
-        List<Committee> committees = await committeeRepository.GetByIdsAsync(command.CommitteeIds, cancellationToken);
-        if (committees.Count != command.CommitteeIds.Distinct().Count())
-        {
-            throw new InvalidOperationException("One or more committees were not found.");
         }
 
         List<Updraft.Data.Entities.Tag> tags = await tagRepository.GetByIdsAsync(command.TagIds, cancellationToken);
@@ -63,14 +56,14 @@ public sealed class RequestService(
             TimingResponse = command.TimingResponse,
             ExistingLawResponse = command.ExistingLawResponse,
             Status = RequestStatus.Unassigned,
-            RequestCommittees = command.CommitteeIds
-                .Distinct()
-                .Select(committeeId => new RequestCommittee
-                {
-                    RequestId = requestId,
-                    CommitteeId = committeeId
-                })
-                .ToList(),
+            // RequestCommittees = command.CommitteeIds
+            //     .Distinct()
+            //     .Select(committeeId => new RequestCommittee
+            //     {
+            //         RequestId = requestId,
+            //         CommitteeId = committeeId
+            //     })
+            //     .ToList(),
             RequestTags = command.TagIds
                 .Distinct()
                 .Select(tagId => new RequestTag

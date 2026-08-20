@@ -9,7 +9,6 @@ public sealed class UpdraftDbContext(DbContextOptions<UpdraftDbContext> options)
     private const string DefaultSchema = "updraft";
 
     public DbSet<Attachment> Attachments => Set<Attachment>();
-    public DbSet<Committee> Committees => Set<Committee>();
     public DbSet<Draft> Drafts => Set<Draft>();
     public DbSet<Job> Jobs => Set<Job>();
     public DbSet<Note> Notes => Set<Note>();
@@ -41,8 +40,6 @@ public sealed class UpdraftDbContext(DbContextOptions<UpdraftDbContext> options)
             entity.ToTable("attachments");
             entity.ToTable(t => t.HasCheckConstraint("ck_attachments_single_parent",
                 "(CASE WHEN request_id IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN draft_id IS NOT NULL THEN 1 ELSE 0 END) = 1"));
-            entity.ToTable(t => t.HasCheckConstraint("ck_attachments_role",
-                "attachment_role IN ('Draft', 'PriorLegislation', 'PolicyPaper', 'IntakeSupport')"));
             entity.HasKey(x => x.AttachmentId);
             entity.Property(x => x.AttachmentId).HasColumnName("attachment_id");
             entity.Property(x => x.RequestId).HasColumnName("request_id");
@@ -60,22 +57,6 @@ public sealed class UpdraftDbContext(DbContextOptions<UpdraftDbContext> options)
                 .OnDelete(DeleteBehavior.NoAction);
             entity.HasIndex(x => x.RequestId).HasDatabaseName("idx_attachments_request_id");
             entity.HasIndex(x => x.DraftId).HasDatabaseName("idx_attachments_draft_id");
-        });
-
-        modelBuilder.Entity<Committee>(entity =>
-        {
-            entity.ToTable("committees");
-            entity.HasKey(x => x.CommitteeId);
-            entity.Property(x => x.CommitteeId).HasColumnName("committee_id");
-            entity.Property(x => x.OfficeId).HasColumnName("office_id");
-            entity.Property(x => x.CommitteeCode).HasColumnName("committee_code").IsRequired();
-            entity.Property(x => x.CommitteeName).HasColumnName("committee_name").IsRequired();
-            entity.Property(x => x.ChangeId).HasColumnName("change_id").HasDefaultValueSql("gen_random_uuid()");
-            entity.HasOne(x => x.Office)
-                .WithMany(x => x.Committees)
-                .HasForeignKey(x => x.OfficeId)
-                .OnDelete(DeleteBehavior.Cascade);
-            entity.HasIndex(x => x.OfficeId).HasDatabaseName("idx_committees_office_id");
         });
 
         modelBuilder.Entity<Draft>(entity =>
@@ -96,7 +77,6 @@ public sealed class UpdraftDbContext(DbContextOptions<UpdraftDbContext> options)
         modelBuilder.Entity<Job>(entity =>
         {
             entity.ToTable("jobs");
-            entity.ToTable(t => t.HasCheckConstraint("ck_jobs_status", "status IN ('Open', 'Closed')"));
             entity.HasKey(x => x.JobId);
             entity.Property(x => x.JobId).HasColumnName("job_id");
             entity.Property(x => x.RequestId).HasColumnName("request_id");
@@ -156,21 +136,18 @@ public sealed class UpdraftDbContext(DbContextOptions<UpdraftDbContext> options)
         modelBuilder.Entity<Office>(entity =>
         {
             entity.ToTable("offices");
-            entity.ToTable(t => t.HasCheckConstraint("ck_offices_office_type", "office_type IN ('Member', 'Committee', 'Caucus')"));
             entity.HasKey(x => x.OfficeId);
             entity.Property(x => x.OfficeId).HasColumnName("office_id");
-            entity.Property(x => x.OfficeName).HasColumnName("office_name").IsRequired();
-            entity.Property(x => x.OfficeGraph).HasColumnName("office_graph").IsRequired();
+            entity.Property(x => x.Name).HasColumnName("name").IsRequired();
+            entity.Property(x => x.FormalName).HasColumnName("formal_name").IsRequired();
+            entity.Property(x => x.Directory).HasColumnName("directory").IsRequired();
             entity.Property(x => x.OfficeType).HasColumnName("office_type").HasConversion<string>().IsRequired();
-            entity.Property(x => x.Bioguide).HasColumnName("bioguide");
-            entity.Property(x => x.Commcode).HasColumnName("commcode");
-            entity.Property(x => x.ChangeId).HasColumnName("change_id").HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(x => x.IdCode).HasColumnName("id_code");
         });
 
         modelBuilder.Entity<Request>(entity =>
         {
             entity.ToTable("requests");
-            entity.ToTable(t => t.HasCheckConstraint("ck_requests_status", "status IN ('Unassigned', 'Assigned', 'Closed')"));
             entity.HasKey(x => x.RequestId);
             entity.Property(x => x.RequestId).HasColumnName("request_id");
             entity.Property(x => x.OfficeId).HasColumnName("office_id");
@@ -197,18 +174,18 @@ public sealed class UpdraftDbContext(DbContextOptions<UpdraftDbContext> options)
         modelBuilder.Entity<RequestCommittee>(entity =>
         {
             entity.ToTable("request_committees");
-            entity.HasKey(x => new { x.RequestId, x.CommitteeId });
+            entity.HasKey(x => new { x.RequestId, x.OfficeId });
             entity.Property(x => x.RequestId).HasColumnName("request_id");
-            entity.Property(x => x.CommitteeId).HasColumnName("committee_id");
+            entity.Property(x => x.OfficeId).HasColumnName("office_id");
             entity.HasOne(x => x.Request)
                 .WithMany(x => x.RequestCommittees)
                 .HasForeignKey(x => x.RequestId)
                 .OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne(x => x.Committee)
+            entity.HasOne(x => x.Office)
                 .WithMany(x => x.RequestCommittees)
-                .HasForeignKey(x => x.CommitteeId)
+                .HasForeignKey(x => x.OfficeId)
                 .OnDelete(DeleteBehavior.Restrict);
-            entity.HasIndex(x => x.CommitteeId).HasDatabaseName("idx_request_committees_committee_id");
+            entity.HasIndex(x => x.OfficeId).HasDatabaseName("idx_request_committees_office_id");
         });
 
         modelBuilder.Entity<RequestTag>(entity =>

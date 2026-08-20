@@ -41,7 +41,6 @@ var connectionString = builder.Configuration.GetConnectionString("Updraft")
 builder.Services.AddDbContext<UpdraftDbContext>(options => options.UseNpgsql(connectionString));
 
 builder.Services.AddScoped<IAttachmentRepository, AttachmentRepository>();
-builder.Services.AddScoped<ICommitteeRepository, CommitteeRepository>();
 builder.Services.AddScoped<IDraftRepository, DraftRepository>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<INoteRepository, NoteRepository>();

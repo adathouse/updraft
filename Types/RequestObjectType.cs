@@ -29,9 +29,9 @@ public static partial class RequestObjectType
     public static IQueryable<EntityTag> GetTags([Parent] Request request, ITagRepository tagRepository) =>
         tagRepository.QueryByRequestId(request.RequestId);
 
-    [UsePaging]
-    [UseFiltering]
-    [UseSorting]
-    public static IQueryable<Committee> GetProposedCommittees([Parent] Request request, ICommitteeRepository committeeRepository) =>
-        committeeRepository.QueryByRequestId(request.RequestId);
+    // [UsePaging]
+    // [UseFiltering]
+    // [UseSorting]
+    // public static IQueryable<Committee> GetProposedCommittees([Parent] Request request, ICommitteeRepository committeeRepository) =>
+    //     committeeRepository.QueryByRequestId(request.RequestId);
 }
