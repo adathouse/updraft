@@ -2,13 +2,11 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS offices (
     office_id uuid PRIMARY KEY,
-    office_name text NOT NULL,
-    office_graph text NOT NULL,
+    name text NOT NULL,
+    formal_name text NOT NULL,
+    directory text NOT NULL,
     office_type text NOT NULL,
-    bioguide text NULL,
-    commcode text NULL,
-    change_id uuid NOT NULL DEFAULT gen_random_uuid(),
-    CONSTRAINT ck_offices_office_type CHECK (office_type IN ('Member', 'Committee', 'Caucus'))
+    id_code text NULL
 );
 
 CREATE TABLE IF NOT EXISTS users (
@@ -49,16 +47,6 @@ CREATE TABLE IF NOT EXISTS requests (
     CONSTRAINT ck_requests_status CHECK (status IN ('Unassigned', 'Assigned', 'Closed'))
 );
 
-CREATE TABLE IF NOT EXISTS committees (
-    committee_id uuid PRIMARY KEY,
-    office_id uuid NOT NULL,
-    committee_code text NOT NULL,
-    committee_name text NOT NULL,
-    change_id uuid NOT NULL DEFAULT gen_random_uuid(),
-    CONSTRAINT fk_committees_office FOREIGN KEY (office_id)
-        REFERENCES offices (office_id)
-        ON DELETE CASCADE
-);
 
 CREATE TABLE IF NOT EXISTS jobs (
     job_id uuid PRIMARY KEY,
@@ -135,13 +123,13 @@ CREATE TABLE IF NOT EXISTS notes (
 
 CREATE TABLE IF NOT EXISTS request_committees (
     request_id uuid NOT NULL,
-    committee_id uuid NOT NULL,
-    PRIMARY KEY (request_id, committee_id),
+    office_id uuid NOT NULL,
+    PRIMARY KEY (request_id, office_id),
     CONSTRAINT fk_request_committees_request FOREIGN KEY (request_id)
         REFERENCES requests (request_id)
         ON DELETE CASCADE,
-    CONSTRAINT fk_request_committees_committee FOREIGN KEY (committee_id)
-        REFERENCES committees (committee_id)
+    CONSTRAINT fk_request_committees_committee FOREIGN KEY (office_id)
+        REFERENCES offices (office_id)
         ON DELETE RESTRICT
 );
 
@@ -157,7 +145,6 @@ CREATE TABLE IF NOT EXISTS request_tags (
         ON DELETE RESTRICT
 );
 
-CREATE INDEX IF NOT EXISTS idx_committees_office_id ON committees (office_id);
 CREATE INDEX IF NOT EXISTS idx_requests_office_id ON requests (office_id);
 CREATE INDEX IF NOT EXISTS idx_requests_status ON requests (status);
 CREATE INDEX IF NOT EXISTS idx_jobs_assignee_id ON jobs (assignee_id);
@@ -169,5 +156,5 @@ CREATE INDEX IF NOT EXISTS idx_notes_request_id ON notes (request_id);
 CREATE INDEX IF NOT EXISTS idx_notes_job_id ON notes (job_id);
 CREATE INDEX IF NOT EXISTS idx_notes_draft_id ON notes (draft_id);
 CREATE INDEX IF NOT EXISTS idx_notes_parent_note_id ON notes (parent_note_id);
-CREATE INDEX IF NOT EXISTS idx_request_committees_committee_id ON request_committees (committee_id);
+CREATE INDEX IF NOT EXISTS idx_request_committees_office_id ON request_committees (office_id);
 CREATE INDEX IF NOT EXISTS idx_request_tags_tag_id ON request_tags (tag_id);

@@ -1,4 +1,7 @@
--- Run this script as a PostgreSQL superuser.
+-- Run this script as a PostgreSQL psqladmin
+CREATE DATABASE updraft;
+
+\connect updraft
 
 DO
 $$
@@ -8,17 +11,6 @@ BEGIN
     END IF;
 END
 $$;
-
-DO
-$$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'updraft') THEN
-        CREATE DATABASE updraft OWNER updraft;
-    END IF;
-END
-$$;
-
-\connect updraft
 
 CREATE SCHEMA IF NOT EXISTS updraft AUTHORIZATION updraft;
 GRANT USAGE, CREATE ON SCHEMA updraft TO updraft;
