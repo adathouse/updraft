@@ -1,0 +1,34 @@
+using Microsoft.EntityFrameworkCore;
+using Updraft.Data;
+using Updraft.Data.Entities;
+
+namespace Updraft.Repositories;
+
+public interface IAttachmentRepository
+{
+    IQueryable<Attachment> Query();
+    IQueryable<Attachment> QueryByRequestId(Guid requestId);
+    IQueryable<Attachment> QueryByDraftId(Guid draftId);
+
+    Task AddAsync(Attachment attachment, CancellationToken cancellationToken);
+
+    Task SaveChangesAsync(CancellationToken cancellationToken);
+
+}
+
+public sealed class AttachmentRepository(UpdraftDbContext dbContext) : IAttachmentRepository
+{
+    public IQueryable<Attachment> Query() => dbContext.Attachments.AsNoTracking();
+
+    public IQueryable<Attachment> QueryByRequestId(Guid requestId) =>
+        dbContext.Attachments.AsNoTracking().Where(x => x.RequestId == requestId);
+
+    public IQueryable<Attachment> QueryByDraftId(Guid draftId) =>
+        dbContext.Attachments.AsNoTracking().Where(x => x.DraftId == draftId);
+
+    public Task AddAsync(Attachment attachment, CancellationToken cancellationToken) =>
+           dbContext.Attachments.AddAsync(attachment, cancellationToken).AsTask();
+
+    public Task SaveChangesAsync(CancellationToken cancellationToken) => dbContext.SaveChangesAsync(cancellationToken);
+
+}
