@@ -10,7 +10,7 @@ namespace Updraft.Types;
 public static partial class Mutation
 {
     //[Authorize(Policy = AuthorizationPolicies.Requester)]
-    public static Task<Request> RequestDraftAsync(
+    public static Task<Request> SubmitRequestAsync(
         CreateRequestInput input,
         RequestService requestService,
         CancellationToken cancellationToken) =>
@@ -28,10 +28,7 @@ public static partial class Mutation
                 input.TimingResponse,
                 input.ExistingLawResponse,
                 input.CommitteeIds,
-                input.TagIds,
-                input.Attachments
-                    .Select(attachment => new NewAttachmentCommand(attachment.StorageKey, attachment.AttachmentRole))
-                    .ToList()),
+                input.TagIds),
             cancellationToken);
 
     //[Authorize(Policy = AuthorizationPolicies.FrontOffice)]
@@ -51,10 +48,7 @@ public static partial class Mutation
         draftService.SubmitDraftAsync(
             new SubmitDraftCommand(
                 input.JobId,
-                input.Comment,
-                input.Attachments
-                    .Select(attachment => new NewAttachmentCommand(attachment.StorageKey, attachment.AttachmentRole))
-                    .ToList()),
+                input.Comment),
             cancellationToken);
 
     //[Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
@@ -73,5 +67,14 @@ public static partial class Mutation
         CancellationToken cancellationToken) =>
         noteService.ReplyToNoteAsync(
             new ReplyToNoteCommand(input.ParentNoteId, input.Text),
+            cancellationToken);
+
+    //[Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
+    public static Task<Attachment> AddAttachmentAsync(
+        AddAttachmentInput input,
+        AttachmentService attachmentService,
+        CancellationToken cancellationToken) =>
+        attachmentService.AddAttachmentAsync(
+            new AddAttachmentCommand(input.Role, input.RequestId, input.DraftId),
             cancellationToken);
 }

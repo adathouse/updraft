@@ -2,8 +2,6 @@ using Updraft.Data.Entities;
 
 namespace Updraft.Types.Inputs;
 
-public sealed record AttachmentInput(string StorageKey, AttachmentRole AttachmentRole);
-
 public sealed record CreateRequestInput(
     Guid OfficeId,
     string? Proposal,
@@ -17,13 +15,14 @@ public sealed record CreateRequestInput(
     string TimingResponse,
     string ExistingLawResponse,
     IReadOnlyList<Guid> CommitteeIds,
-    IReadOnlyList<string> TagIds,
-    IReadOnlyList<AttachmentInput> Attachments);
+    IReadOnlyList<string> TagIds);
 
 public sealed record CreateJobInput(Guid RequestId, Guid AssigneeId, string Description);
 
-public sealed record SubmitDraftInput(Guid JobId, string Comment, IReadOnlyList<AttachmentInput> Attachments);
+public sealed record SubmitDraftInput(Guid JobId, string Comment);
 
 public sealed record AddNoteInput(string Text, Guid? RequestId, Guid? JobId, Guid? DraftId);
 
 public sealed record ReplyToNoteInput(Guid ParentNoteId, string Text);
+
+public sealed record AddAttachmentInput(AttachmentRole Role, Guid? RequestId, Guid? DraftId);

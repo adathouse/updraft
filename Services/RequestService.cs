@@ -3,8 +3,6 @@ using Updraft.Repositories;
 
 namespace Updraft.Services;
 
-public sealed record NewAttachmentCommand(string StorageKey, AttachmentRole AttachmentRole);
-
 public sealed record CreateRequestCommand(
     Guid OfficeId,
     string? Proposal,
@@ -18,8 +16,7 @@ public sealed record CreateRequestCommand(
     string TimingResponse,
     string ExistingLawResponse,
     IReadOnlyList<Guid> CommitteeIds,
-    IReadOnlyList<string> TagIds,
-    IReadOnlyList<NewAttachmentCommand> Attachments);
+    IReadOnlyList<string> TagIds);
 
 public sealed class RequestService(
     IRequestRepository requestRepository,
@@ -39,6 +36,13 @@ public sealed class RequestService(
             throw new InvalidOperationException("One or more tags were not found.");
         }
 
+
+        List<Office> committees = await officeRepository.GetByIdsAsync(command.CommitteeIds, cancellationToken);
+        if(committees.Count != command.CommitteeIds.Distinct().Count())
+        {
+             throw new InvalidOperationException("One or more committees were not found.");
+        }
+
         var requestId = Guid.NewGuid();
 
         var request = new Request
@@ -56,31 +60,19 @@ public sealed class RequestService(
             TimingResponse = command.TimingResponse,
             ExistingLawResponse = command.ExistingLawResponse,
             Status = RequestStatus.Unassigned,
-            // RequestCommittees = command.CommitteeIds
-            //     .Distinct()
-            //     .Select(committeeId => new RequestCommittee
-            //     {
-            //         RequestId = requestId,
-            //         CommitteeId = committeeId
-            //     })
-            //     .ToList(),
-            RequestTags = command.TagIds
+            RequestCommittees = [.. committees
+                .Select(c => new RequestCommittee
+                {
+                    RequestId = requestId,
+                    OfficeId = c.OfficeId
+                })],
+            RequestTags = [.. command.TagIds
                 .Distinct()
                 .Select(tagId => new RequestTag
                 {
                     RequestId = requestId,
                     TagId = tagId
-                })
-                .ToList(),
-            Attachments = command.Attachments
-                .Select(attachment => new Attachment
-                {
-                    AttachmentId = Guid.NewGuid(),
-                    RequestId = requestId,
-                    StorageKey = attachment.StorageKey,
-                    AttachmentRole = attachment.AttachmentRole
-                })
-                .ToList()
+                })]
         };
 
         await requestRepository.AddAsync(request, cancellationToken);

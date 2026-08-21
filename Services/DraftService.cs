@@ -3,7 +3,7 @@ using Updraft.Repositories;
 
 namespace Updraft.Services;
 
-public sealed record SubmitDraftCommand(Guid JobId, string Comment, IReadOnlyList<NewAttachmentCommand> Attachments);
+public sealed record SubmitDraftCommand(Guid JobId, string Comment);
 
 public sealed class DraftService(IJobRepository jobRepository, IDraftRepository draftRepository)
 {
@@ -20,26 +20,12 @@ public sealed class DraftService(IJobRepository jobRepository, IDraftRepository 
             throw new InvalidOperationException("Job is not open.");
         }
 
-        if (command.Attachments.Count == 0)
-        {
-            throw new InvalidOperationException("At least one attachment is required.");
-        }
-
         var draftId = Guid.NewGuid();
         var draft = new Draft
         {
             DraftId = draftId,
             JobId = command.JobId,
-            Comment = command.Comment,
-            Attachments = command.Attachments
-                .Select(attachment => new Attachment
-                {
-                    AttachmentId = Guid.NewGuid(),
-                    DraftId = draftId,
-                    StorageKey = attachment.StorageKey,
-                    AttachmentRole = attachment.AttachmentRole
-                })
-                .ToList()
+            Comment = command.Comment
         };
 
         await draftRepository.AddAsync(draft, cancellationToken);

@@ -53,6 +53,7 @@ builder.Services.AddScoped<DraftService>();
 builder.Services.AddScoped<JobService>();
 builder.Services.AddScoped<NoteService>();
 builder.Services.AddScoped<RequestService>();
+builder.Services.AddScoped<AttachmentService>();
 
 builder.Services
 	.AddGraphQLServer()
