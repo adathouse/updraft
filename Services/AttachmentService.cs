@@ -39,8 +39,8 @@ public sealed class AttachmentService(IAttachmentRepository attachmentRepository
             AttachmentRole = command.Role,
             RequestId = command.RequestId,
             DraftId = command.DraftId,
-            StorageKey = "TBD"
-            //AttachmentUri = $"{prefix}/{pathId}/{attachmentId}";
+            StorageKey = "TBD",
+            AttachmentUri = $"{prefix}/{pathId}/{attachmentId}"
         };
 
         await attachmentRepository.AddAsync(result, cancellation);

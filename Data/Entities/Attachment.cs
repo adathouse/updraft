@@ -6,6 +6,7 @@ public sealed class Attachment : IChangeTracked
     public Guid? RequestId { get; set; }
     public Guid? DraftId { get; set; }
     public string StorageKey { get; set; } = string.Empty;
+    public string AttachmentUri { get; set; } = string.Empty;
     public AttachmentRole AttachmentRole { get; set; }
     public Guid ChangeId { get; set; }
 

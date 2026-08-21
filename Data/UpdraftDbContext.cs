@@ -45,6 +45,7 @@ public sealed class UpdraftDbContext(DbContextOptions<UpdraftDbContext> options)
             entity.Property(x => x.RequestId).HasColumnName("request_id");
             entity.Property(x => x.DraftId).HasColumnName("draft_id");
             entity.Property(x => x.StorageKey).HasColumnName("storage_key").IsRequired();
+            entity.Property(x => x.AttachmentUri).HasColumnName("attachment_uri").IsRequired();
             entity.Property(x => x.AttachmentRole).HasColumnName("attachment_role").HasConversion<string>().IsRequired();
             entity.Property(x => x.ChangeId).HasColumnName("change_id").HasDefaultValueSql("gen_random_uuid()");
             entity.HasOne(x => x.Request)

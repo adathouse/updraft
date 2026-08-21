@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS attachments (
     request_id uuid NULL,
     draft_id uuid NULL,
     storage_key text NOT NULL,
+    attachment_uri text NOT NULL,
     attachment_role text NOT NULL,
     change_id uuid NOT NULL DEFAULT gen_random_uuid(),
     CONSTRAINT fk_attachments_request FOREIGN KEY (request_id)
