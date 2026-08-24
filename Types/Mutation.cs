@@ -31,6 +31,27 @@ public static partial class Mutation
                 input.TagIds),
             cancellationToken);
 
+    //[Authorize(Policy = AuthorizationPolicies.Requester)]
+    public static Task<Request> UpdateRequestAsync(
+        UpdateRequestInput input,
+        RequestService requestService,
+        CancellationToken cancellationToken) =>
+        requestService.UpdateRequestAsync(
+            new UpdateRequestCommand(
+                input.RequestId,
+                input.Proposal,
+                input.AmendingBill,
+                input.ReintroducingBill,
+                input.RelatedAgencies,
+                input.RelatedLaw,
+                input.ScopeResponse,
+                input.AdministrationResponse,
+                input.EnforcementResponse,
+                input.TimingResponse,
+                input.ExistingLawResponse,
+                input.Status),
+            cancellationToken);
+
     //[Authorize(Policy = AuthorizationPolicies.FrontOffice)]
     public static Task<Job> CreateJobAsync(
         CreateJobInput input,
@@ -38,6 +59,15 @@ public static partial class Mutation
         CancellationToken cancellationToken) =>
         jobService.CreateJobAsync(
             new CreateJobCommand(input.RequestId, input.AssigneeId, input.Description),
+            cancellationToken);
+
+    //[Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
+    public static Task<Job> UpdateJobAsync(
+        UpdateJobInput input,
+        JobService jobService,
+        CancellationToken cancellationToken) =>
+        jobService.UpdateJobAsync(
+            new UpdateJobCommand(input.JobId, input.AssigneeId, input.Description, input.Status),
             cancellationToken);
 
     //[Authorize(Policy = AuthorizationPolicies.Drafter)]

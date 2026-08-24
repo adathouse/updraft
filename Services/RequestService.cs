@@ -18,6 +18,20 @@ public sealed record CreateRequestCommand(
     IReadOnlyList<Guid> CommitteeIds,
     IReadOnlyList<string> TagIds);
 
+public sealed record UpdateRequestCommand(
+    Guid RequestId,
+    string? Proposal,
+    string? AmendingBill,
+    string? ReintroducingBill,
+    string? RelatedAgencies,
+    string? RelatedLaw,
+    string ScopeResponse,
+    string AdministrationResponse,
+    string EnforcementResponse,
+    string TimingResponse,
+    string ExistingLawResponse,
+    RequestStatus Status);
+
 public sealed class RequestService(
     IRequestRepository requestRepository,
     IOfficeRepository officeRepository,
@@ -76,6 +90,30 @@ public sealed class RequestService(
         };
 
         await requestRepository.AddAsync(request, cancellationToken);
+        await requestRepository.SaveChangesAsync(cancellationToken);
+        return request;
+    }
+
+    public async Task<Request> UpdateRequestAsync(UpdateRequestCommand command, CancellationToken cancellationToken)
+    {
+        Request? request = await requestRepository.GetByIdAsync(command.RequestId, cancellationToken);
+        if (request is null)
+        {
+            throw new InvalidOperationException("Request was not found.");
+        }
+
+        request.Proposal = command.Proposal;
+        request.AmendingBill = command.AmendingBill;
+        request.ReintroducingBill = command.ReintroducingBill;
+        request.RelatedAgencies = command.RelatedAgencies;
+        request.RelatedLaw = command.RelatedLaw;
+        request.ScopeResponse = command.ScopeResponse;
+        request.AdministrationResponse = command.AdministrationResponse;
+        request.EnforcementResponse = command.EnforcementResponse;
+        request.TimingResponse = command.TimingResponse;
+        request.ExistingLawResponse = command.ExistingLawResponse;
+        request.Status = command.Status;
+
         await requestRepository.SaveChangesAsync(cancellationToken);
         return request;
     }

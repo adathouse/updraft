@@ -17,7 +17,23 @@ public sealed record CreateRequestInput(
     IReadOnlyList<Guid> CommitteeIds,
     IReadOnlyList<string> TagIds);
 
+public sealed record UpdateRequestInput(
+    Guid RequestId,
+    string? Proposal,
+    string? AmendingBill,
+    string? ReintroducingBill,
+    string? RelatedAgencies,
+    string? RelatedLaw,
+    string ScopeResponse,
+    string AdministrationResponse,
+    string EnforcementResponse,
+    string TimingResponse,
+    string ExistingLawResponse,
+    RequestStatus Status);
+
 public sealed record CreateJobInput(Guid RequestId, Guid AssigneeId, string Description);
+
+public sealed record UpdateJobInput(Guid JobId, Guid AssigneeId, string Description, JobStatus Status);
 
 public sealed record SubmitDraftInput(Guid JobId, string Comment);
 
