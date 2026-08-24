@@ -9,6 +9,7 @@ public interface IAttachmentRepository
     IQueryable<Attachment> Query();
     IQueryable<Attachment> QueryByRequestId(Guid requestId);
     IQueryable<Attachment> QueryByDraftId(Guid draftId);
+    Task<Attachment?> GetByIdAsync(Guid attachmentId, CancellationToken cancellationToken);
 
     Task AddAsync(Attachment attachment, CancellationToken cancellationToken);
 
@@ -25,6 +26,9 @@ public sealed class AttachmentRepository(UpdraftDbContext dbContext) : IAttachme
 
     public IQueryable<Attachment> QueryByDraftId(Guid draftId) =>
         dbContext.Attachments.AsNoTracking().Where(x => x.DraftId == draftId);
+
+    public Task<Attachment?> GetByIdAsync(Guid attachmentId, CancellationToken cancellationToken) =>
+        dbContext.Attachments.FirstOrDefaultAsync(x => x.AttachmentId == attachmentId, cancellationToken);
 
     public Task AddAsync(Attachment attachment, CancellationToken cancellationToken) =>
            dbContext.Attachments.AddAsync(attachment, cancellationToken).AsTask();
