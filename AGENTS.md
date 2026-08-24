@@ -62,16 +62,24 @@ The following use cases should be supported by the API.
 -- Requester fills out an intake questionaire
 -- Requester optionally attaches file to the request
 -- the new request is stored in the the database and attachments are stored in the BLOB store for review by the Front Office
+-- The status of the Request is "NEW"
+
+### Update a Request
+- Role: Requester (staff in a Member or Committee Office)
+- Action: Requester updates a draft to modify the description or update the status.
+- Steps:
+-- Requester updates the description or status.
+-- Requester optionally attaches file to the request
+-- The updated Request is stored. 
 
 ### Create a job
 - Role: Front Office Staff 
 - Action: Front Office Staff reviews new requests and creates jobs to assign a request to a Drafter.
 - Steps:
--- Front Office reviews the list of unassigned requests.
+-- Front Office reviews the list of Requests without Jobs.
 -- Front Office selects an unassigned request and chooses "Create Job"
 -- Front Office adds key information and comments to the job and selects a Drafter
 -- Front Office saves the new job associated with the request. 
-
 
 ### Submit a draft
 - Role: Drafter 
@@ -102,11 +110,19 @@ The following use cases should be supported by the API.
 
 ### List unassigned requests
 - Role: Front Office Staff
-- Action: view all requests that have not yet been assigned to a job, to triage and assign them.
+- Action: view all Requests that do not have a Job assigned to them.
 
 ### List open jobs
 - Role: Drafter, Front Office
 - Action: view jobs with an open status, filtered by assignee where appropriate.
+
+### Update a Job
+- Role: Drafter, Front Office
+- Action: Update the assignee or status of a Job.
+- Steps:
+-- Select a job you own if you are a Drafter, or any Job if you are the Front Office.
+-- Update the status or assignee.
+-- Save the Job.
 
 ### View a job
 - Role: Requester, Drafter, Front Office
@@ -116,10 +132,15 @@ The following use cases should be supported by the API.
 - Role: Requester, Drafter, Front Office
 - Action: view the notes attached to a request, job or draft, including threaded replies.
 
-
 ## Data types
 
 The following types will be needed to support the use cases.
+
+All changes are tracked with a `change_id` that is updated whenever the row is updated. 
+This allows consumers to see changes and internal services to detect changes for updates. 
+Requests are created and managed by Member Office or Committee.
+Jobs are assigned by Front Office staff and tracked and managed by Front Office staff and Drafters.
+Drafts are created and managed by Drafters based on a Request from a Member or Committee.
 
 ### Request
 - Description: A request for a new draft from an Office, including responses to the intake questionaire.
@@ -151,7 +172,7 @@ The following types will be needed to support the use cases.
 
 
 ### Office
-- Description: An Office or related entity that can request legislation. 
+- Description: An Office or related entity that can request legislation. Office represents both Member Offices and Committees. Requests can be made by both types of Offices. Office is also used for the list of Committees when Committees alone are needed. Office may be extended for Executive Agencies at some point.
 - Fields:
 -- office_id: PK
 -- office_name: text
@@ -205,7 +226,7 @@ The following types will be needed to support the use cases.
 - Note: exactly one of request_id, job_id, draft_id or parent_note_id is non-null; the non-null column identifies the parent.
 
 ### User
-- Description: various system users, distinguished by role, associated with an identity in the Entra tenant (i.e. authenitcated)
+- Description: various system users, distinguished by role, associated with an identity in the Entra tenant (i.e. authenitcated). Users are a proxy for an Entra identity and a foreign key reference for data that is owned by or controlled by a specific user, including Request, Job, Draft and Note. Authenication claims for each user will determine roles. 
 - Fields:
 -- user_id: PK
 -- entra_id: reference to the Entra entry, probably the sid
