@@ -1,3 +1,4 @@
+using HotChocolate;
 using HotChocolate.Authorization;
 using Updraft.Data.Entities;
 using Updraft.Security;
@@ -10,6 +11,9 @@ namespace Updraft.Types;
 public static partial class Mutation
 {
     //[Authorize(Policy = AuthorizationPolicies.Requester)]
+    [Error<OfficeNotFoundException>]
+    [Error<TagsNotFoundException>]
+    [Error<CommitteesNotFoundException>]
     public static Task<Request> SubmitRequestAsync(
         CreateRequestInput input,
         RequestService requestService,
@@ -32,6 +36,7 @@ public static partial class Mutation
             cancellationToken);
 
     //[Authorize(Policy = AuthorizationPolicies.Requester)]
+    [Error<RequestNotFoundException>]
     public static Task<Request> UpdateRequestAsync(
         UpdateRequestInput input,
         RequestService requestService,
@@ -53,6 +58,9 @@ public static partial class Mutation
             cancellationToken);
 
     //[Authorize(Policy = AuthorizationPolicies.FrontOffice)]
+    [Error<RequestNotFoundException>]
+    [Error<RequestNotUnassignedException>]
+    [Error<AssigneeNotFoundException>]
     public static Task<Job> CreateJobAsync(
         CreateJobInput input,
         JobService jobService,
@@ -62,6 +70,8 @@ public static partial class Mutation
             cancellationToken);
 
     //[Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
+    [Error<JobNotFoundException>]
+    [Error<AssigneeNotFoundException>]
     public static Task<Job> UpdateJobAsync(
         UpdateJobInput input,
         JobService jobService,
@@ -71,6 +81,8 @@ public static partial class Mutation
             cancellationToken);
 
     //[Authorize(Policy = AuthorizationPolicies.Drafter)]
+    [Error<JobNotFoundException>]
+    [Error<JobNotOpenException>]
     public static Task<Draft> SubmitDraftAsync(
         SubmitDraftInput input,
         DraftService draftService,
@@ -82,6 +94,10 @@ public static partial class Mutation
             cancellationToken);
 
     //[Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
+    [Error<InvalidNoteParentException>]
+    [Error<RequestNotFoundException>]
+    [Error<JobNotFoundException>]
+    [Error<DraftNotFoundException>]
     public static Task<Note> AddNoteAsync(
         AddNoteInput input,
         NoteService noteService,
@@ -91,6 +107,7 @@ public static partial class Mutation
             cancellationToken);
 
     //[Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
+    [Error<NoteNotFoundException>]
     public static Task<Note> ReplyToNoteAsync(
         ReplyToNoteInput input,
         NoteService noteService,
@@ -100,6 +117,9 @@ public static partial class Mutation
             cancellationToken);
 
     //[Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
+    [Error<RequestNotFoundException>]
+    [Error<DraftNotFoundException>]
+    [Error<InvalidAttachmentParentException>]
     public static Task<Attachment> AddAttachmentAsync(
         AddAttachmentInput input,
         AttachmentService attachmentService,

@@ -17,22 +17,22 @@ public sealed class NoteService(
         int parentCount = new[] { command.RequestId, command.JobId, command.DraftId }.Count(x => x.HasValue);
         if (parentCount != 1)
         {
-            throw new InvalidOperationException("Exactly one parent (request, job, draft) must be provided.");
+            throw new InvalidNoteParentException();
         }
 
         if (command.RequestId.HasValue && !await requestRepository.ExistsAsync(command.RequestId.Value, cancellationToken))
         {
-            throw new InvalidOperationException("Request was not found.");
+            throw new RequestNotFoundException(command.RequestId.Value);
         }
 
         if (command.JobId.HasValue && await jobRepository.GetByIdAsync(command.JobId.Value, cancellationToken) is null)
         {
-            throw new InvalidOperationException("Job was not found.");
+            throw new JobNotFoundException(command.JobId.Value);
         }
 
         if (command.DraftId.HasValue && await draftRepository.GetByIdAsync(command.DraftId.Value, cancellationToken) is null)
         {
-            throw new InvalidOperationException("Draft was not found.");
+            throw new DraftNotFoundException(command.DraftId.Value);
         }
 
         var note = new Note
@@ -54,7 +54,7 @@ public sealed class NoteService(
         Note? parent = await noteRepository.GetByIdAsync(command.ParentNoteId, cancellationToken);
         if (parent is null)
         {
-            throw new InvalidOperationException("Parent note was not found.");
+            throw new NoteNotFoundException(command.ParentNoteId);
         }
 
         var reply = new Note

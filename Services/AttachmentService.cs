@@ -16,17 +16,17 @@ public sealed class AttachmentService(IAttachmentRepository attachmentRepository
     {
         if (command.RequestId.HasValue && !await requestRepository.ExistsAsync(command.RequestId.Value, cancellation))
         {
-            throw new InvalidOperationException("Request was not found.");
+            throw new RequestNotFoundException(command.RequestId.Value);
         }
 
         if (command.DraftId.HasValue && await draftRepository.GetByIdAsync(command.DraftId.Value, cancellation) is null)
         {
-            throw new InvalidOperationException("Draft was not found.");
+            throw new DraftNotFoundException(command.DraftId.Value);
         }
 
         if (command.RequestId.HasValue && command.DraftId.HasValue)
         {
-            throw new InvalidOperationException("Specify either draft or request.");
+            throw new InvalidAttachmentParentException();
         }
 
         var prefix = command.RequestId.HasValue ? "request" : "draft";

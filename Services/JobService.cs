@@ -17,17 +17,17 @@ public sealed class JobService(
         Request? request = await requestRepository.GetByIdAsync(command.RequestId, cancellationToken);
         if (request is null)
         {
-            throw new InvalidOperationException("Request was not found.");
+            throw new RequestNotFoundException(command.RequestId);
         }
 
         if (request.Status != RequestStatus.Unassigned)
         {
-            throw new InvalidOperationException("Request is not unassigned.");
+            throw new RequestNotUnassignedException(command.RequestId);
         }
 
         if (!await userRepository.ExistsAsync(command.AssigneeId, cancellationToken))
         {
-            throw new InvalidOperationException("Assignee was not found.");
+            throw new AssigneeNotFoundException(command.AssigneeId);
         }
 
         request.Status = RequestStatus.Assigned;
@@ -51,13 +51,13 @@ public sealed class JobService(
         Job? job = await jobRepository.GetByIdAsync(command.JobId, cancellationToken);
         if (job is null)
         {
-            throw new InvalidOperationException("Job was not found.");
+            throw new JobNotFoundException(command.JobId);
         }
 
         if (job.AssigneeId != command.AssigneeId
             && !await userRepository.ExistsAsync(command.AssigneeId, cancellationToken))
         {
-            throw new InvalidOperationException("Assignee was not found.");
+            throw new AssigneeNotFoundException(command.AssigneeId);
         }
 
         job.AssigneeId = command.AssigneeId;

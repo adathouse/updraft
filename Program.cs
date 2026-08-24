@@ -62,6 +62,7 @@ builder.Services
 	.AddSorting()
 	.AddProjections()
 	.AddQueryConventions()
+	.AddMutationConventions()
 	.AddGlobalObjectIdentification()
 	.AddUpdraftTypes();
 

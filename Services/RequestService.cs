@@ -41,20 +41,20 @@ public sealed class RequestService(
     {
         if (!await officeRepository.ExistsAsync(command.OfficeId, cancellationToken))
         {
-            throw new InvalidOperationException("Office was not found.");
+            throw new OfficeNotFoundException(command.OfficeId);
         }
 
         List<Updraft.Data.Entities.Tag> tags = await tagRepository.GetByIdsAsync(command.TagIds, cancellationToken);
         if (tags.Count != command.TagIds.Distinct().Count())
         {
-            throw new InvalidOperationException("One or more tags were not found.");
+            throw new TagsNotFoundException();
         }
 
 
         List<Office> committees = await officeRepository.GetByIdsAsync(command.CommitteeIds, cancellationToken);
         if(committees.Count != command.CommitteeIds.Distinct().Count())
         {
-             throw new InvalidOperationException("One or more committees were not found.");
+             throw new CommitteesNotFoundException();
         }
 
         var requestId = Guid.NewGuid();
@@ -99,7 +99,7 @@ public sealed class RequestService(
         Request? request = await requestRepository.GetByIdAsync(command.RequestId, cancellationToken);
         if (request is null)
         {
-            throw new InvalidOperationException("Request was not found.");
+            throw new RequestNotFoundException(command.RequestId);
         }
 
         request.Proposal = command.Proposal;
