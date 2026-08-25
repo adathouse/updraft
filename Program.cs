@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Foundatio.Storage;
 using Updraft.Data;
 using Updraft.Repositories;
 using Updraft.Security;
@@ -40,6 +41,13 @@ var connectionString = builder.Configuration.GetConnectionString("Updraft")
 
 builder.Services.AddDbContext<UpdraftDbContext>(options => options.UseNpgsql(connectionString));
 
+if (builder.Environment.IsDevelopment())
+{
+	var storageFolder = builder.Configuration["Storage:LocalPath"] ?? "storage";
+	builder.Services.AddSingleton<IFileStorage>(_ =>
+		new FolderFileStorage(new FolderFileStorageOptions { Folder = storageFolder }));
+}
+
 builder.Services.AddScoped<IAttachmentRepository, AttachmentRepository>();
 builder.Services.AddScoped<IDraftRepository, DraftRepository>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
@@ -73,5 +81,18 @@ app.UseAuthorization();
 
 app.MapGet("/", () => Results.Ok("Updraft GraphQL API"));
 app.MapGraphQL("/graphql");
+
+app.MapPost("/attachments/{attachmentId}/{fileName}", async (
+	HttpRequest request,
+	Guid attachmentId,
+	string fileName,
+	AttachmentService attachmentService,
+	CancellationToken cancellationToken) =>
+{
+	var contentType = request.ContentType ?? "application/octet-stream";
+	var command = new AttachDocumentCommand(attachmentId, request.Body, fileName, contentType);
+	var attachment = await attachmentService.AttachDocumentAsync(command, cancellationToken);
+	return Results.Ok(attachment);
+});
 
 app.Run();

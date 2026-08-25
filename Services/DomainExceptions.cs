@@ -55,3 +55,8 @@ public sealed class InvalidNoteParentException() : Exception("Exactly one parent
 public sealed class InvalidAttachmentParentException() : Exception("Specify either draft or request.")
 {
 }
+
+public sealed class AttachmentNotFoundException(Guid attachmentId) : Exception("Attachment was not found.")
+{
+    public Guid AttachmentId { get; } = attachmentId;
+}
