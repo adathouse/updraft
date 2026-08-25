@@ -7,6 +7,7 @@ namespace Updraft.Repositories;
 public interface IOfficeRepository
 {
     IQueryable<Office> Query();
+    IQueryable<Office> QueryByRequestId(Guid requestId);
     Task<Office?> GetByIdAsync(Guid officeId, CancellationToken cancellationToken);
     Task<bool> ExistsAsync(Guid officeId, CancellationToken cancellationToken);
 
@@ -16,6 +17,12 @@ public interface IOfficeRepository
 public sealed class OfficeRepository(UpdraftDbContext dbContext) : IOfficeRepository
 {
     public IQueryable<Office> Query() => dbContext.Offices.AsNoTracking();
+
+    public IQueryable<Office> QueryByRequestId(Guid requestId) =>
+        dbContext.RequestCommittees
+            .AsNoTracking()
+            .Where(x => x.RequestId == requestId)
+            .Select(x => x.Office);
 
     public Task<Office?> GetByIdAsync(Guid officeId, CancellationToken cancellationToken) =>
         dbContext.Offices.FirstOrDefaultAsync(x => x.OfficeId == officeId, cancellationToken);

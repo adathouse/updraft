@@ -12,12 +12,12 @@ public sealed class DraftService(IJobRepository jobRepository, IDraftRepository 
         Job? job = await jobRepository.GetByIdAsync(command.JobId, cancellationToken);
         if (job is null)
         {
-            throw new InvalidOperationException("Job was not found.");
+            throw new JobNotFoundException(command.JobId);
         }
 
         if (job.Status != JobStatus.Open)
         {
-            throw new InvalidOperationException("Job is not open.");
+            throw new JobNotOpenException(command.JobId);
         }
 
         var draftId = Guid.NewGuid();
