@@ -183,7 +183,7 @@ mutation SubmitDraft($input: SubmitDraftInput!) {
 ```json
 {
   "input": {
-    "jobId": "00000000-0000-0000-0000-000000000000",
+    "jobId": "1c828e45-3aed-4007-b921-086be76f5759",
     "comment": "First draft for review"
   }
 }
@@ -214,7 +214,7 @@ mutation AddDraftAttachment($input: AddAttachmentInput!) {
 {
   "input": {
     "role": "DRAFT",
-    "draftId": "00000000-0000-0000-0000-000000000000"
+    "draftId": "d3aa6719-3f91-49a9-876c-64787a2ef1e2"
   }
 }
 ```
@@ -223,7 +223,7 @@ Then upload the document bytes for the returned `attachmentId`:
 
 ```bash
 curl -X POST \
-  "http://localhost:5048/attachments/00000000-0000-0000-0000-000000000000/draft.docx" \
+  "http://localhost:5048/attachments/2a063bf2-9123-4c7e-81b6-ed8dd7db296d/draft.docx" \
   -H "Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document" \
   --data-binary @draft.docx
 ```

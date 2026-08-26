@@ -95,4 +95,6 @@ app.MapPost("/attachments/{attachmentId}/{fileName}", async (
 	return Results.Ok(attachment);
 });
 
+// TODO: add a fetch endpoint. The GET should follow the attachment.Uri value
+
 app.Run();

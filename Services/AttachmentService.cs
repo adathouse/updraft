@@ -42,7 +42,7 @@ public sealed class AttachmentService(IAttachmentRepository attachmentRepository
         return result;
     }
 
-    public async Task<Attachment> AttachDocumentAsync(AttachDocumentCommand command, CancellationToken cancellation)
+    public async Task<string> AttachDocumentAsync(AttachDocumentCommand command, CancellationToken cancellation)
     {
         var attachment = await attachmentRepository.GetByIdAsync(command.AttachmentId, cancellation)
             ?? throw new AttachmentNotFoundException(command.AttachmentId);
@@ -57,7 +57,7 @@ public sealed class AttachmentService(IAttachmentRepository attachmentRepository
 
         attachment.StorageKey = storageKey;
         await attachmentRepository.SaveChangesAsync(cancellation);
-        return attachment;
+        return attachment.StorageKey;
     }
 
     private async Task ValidateParentAsync(Guid? requestId, Guid? draftId, CancellationToken cancellation)
