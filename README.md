@@ -23,6 +23,11 @@ export PGPORT=5432
 - name: Updraft - DEV
 - tenant: 4979d838-afe7-4f16-ac52-461bafc329ae
 - client id: 4d67f493-8e21-46ec-825a-afed3b38e9e5
+- scope: api://4d67f493-8e21-46ec-825a-afed3b38e9e5/Updraft.Users
+
+```
+dotnet user-jwts create --scheme Bearer --audience api://4d67f493-… --role Requester --claim oid=<entra_id>
+```
 
 
 ## Flyway migration
