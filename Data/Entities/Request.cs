@@ -4,6 +4,7 @@ public sealed class Request : IChangeTracked
 {
     public Guid RequestId { get; set; }
     public Guid OfficeId { get; set; }
+    public Guid RequesterId { get; set; }
     public string? Proposal { get; set; }
     public string? AmendingBill { get; set; }
     public string? ReintroducingBill { get; set; }
@@ -18,6 +19,7 @@ public sealed class Request : IChangeTracked
     public Guid ChangeId { get; set; }
 
     public Office Office { get; set; } = null!;
+    public User Requester { get; set; } = null!;
     public Job? Job { get; set; }
     public ICollection<RequestTag> RequestTags { get; set; } = [];
     public ICollection<RequestCommittee> RequestCommittees { get; set; } = [];

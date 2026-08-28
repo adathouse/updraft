@@ -1,4 +1,5 @@
 using HotChocolate.Types;
+using Microsoft.EntityFrameworkCore;
 using Updraft.Data.Entities;
 using Updraft.Repositories;
 using EntityTag = Updraft.Data.Entities.Tag;
@@ -17,6 +18,15 @@ public static partial class RequestObjectType
     [NodeResolver]
     public static Task<Request?> GetRequestByIdAsync(Guid id, IRequestRepository requestRepository, CancellationToken cancellationToken) =>
         requestRepository.GetByIdAsync(id, cancellationToken);
+
+    public static Task<Job?> GetJobAsync([Parent] Request request, IJobRepository jobRepository, CancellationToken cancellationToken) =>
+        jobRepository.Query().FirstOrDefaultAsync(x => x.RequestId == request.RequestId, cancellationToken);
+
+    public static Task<Office?> GetOfficeAsync([Parent] Request request, IOfficeRepository officeRepository, CancellationToken cancellationToken) =>
+        officeRepository.Query().FirstOrDefaultAsync(x => x.OfficeId == request.OfficeId, cancellationToken);
+
+    public static Task<User?> GetRequesterAsync([Parent] Request request, IUserRepository userRepository, CancellationToken cancellationToken) =>
+        userRepository.Query().FirstOrDefaultAsync(x => x.UserId == request.RequesterId, cancellationToken);
 
     [UsePaging]
     [UseFiltering]

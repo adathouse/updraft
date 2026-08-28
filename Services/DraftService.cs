@@ -3,9 +3,12 @@ using Updraft.Repositories;
 
 namespace Updraft.Services;
 
-public sealed record SubmitDraftCommand(Guid JobId, string Comment);
+public sealed record SubmitDraftCommand(Guid JobId, Guid DrafterId, string Comment);
 
-public sealed class DraftService(IJobRepository jobRepository, IDraftRepository draftRepository)
+public sealed class DraftService(
+    IJobRepository jobRepository,
+    IDraftRepository draftRepository,
+    IUserRepository userRepository)
 {
     public async Task<Draft> SubmitDraftAsync(SubmitDraftCommand command, CancellationToken cancellationToken)
     {
@@ -20,11 +23,17 @@ public sealed class DraftService(IJobRepository jobRepository, IDraftRepository 
             throw new JobNotOpenException(command.JobId);
         }
 
+        if (!await userRepository.ExistsAsync(command.DrafterId, cancellationToken))
+        {
+            throw new UserNotFoundException(command.DrafterId);
+        }
+
         var draftId = Guid.NewGuid();
         var draft = new Draft
         {
             DraftId = draftId,
             JobId = command.JobId,
+            DrafterId = command.DrafterId,
             Comment = command.Comment
         };
 

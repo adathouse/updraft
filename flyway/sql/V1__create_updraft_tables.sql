@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS tags (
 CREATE TABLE IF NOT EXISTS requests (
     request_id uuid PRIMARY KEY,
     office_id uuid NOT NULL,
+    requester_id uuid NOT NULL,
     proposal text NULL,
     amending_bill text NULL,
     reintroducing_bill text NULL,
@@ -43,6 +44,9 @@ CREATE TABLE IF NOT EXISTS requests (
     change_id uuid NOT NULL DEFAULT gen_random_uuid(),
     CONSTRAINT fk_requests_office FOREIGN KEY (office_id)
         REFERENCES offices (office_id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_requests_requester FOREIGN KEY (requester_id)
+        REFERENCES users (user_id)
         ON DELETE RESTRICT,
     CONSTRAINT ck_requests_status CHECK (status IN ('Unassigned', 'Assigned', 'Closed'))
 );
@@ -68,8 +72,12 @@ CREATE TABLE IF NOT EXISTS jobs (
 CREATE TABLE IF NOT EXISTS drafts (
     draft_id uuid PRIMARY KEY,
     job_id uuid NOT NULL,
+    drafter_id uuid NOT NULL,
     comment text NOT NULL,
     change_id uuid NOT NULL DEFAULT gen_random_uuid(),
+    CONSTRAINT fk_drafts_drafter FOREIGN KEY (drafter_id)
+        REFERENCES users (user_id)
+        ON DELETE RESTRICT,
     CONSTRAINT fk_drafts_job FOREIGN KEY (job_id)
         REFERENCES jobs (job_id)
         ON DELETE CASCADE
@@ -97,6 +105,7 @@ CREATE TABLE IF NOT EXISTS attachments (
 CREATE TABLE IF NOT EXISTS notes (
     note_id uuid PRIMARY KEY,
     text text NOT NULL,
+    owner_id uuid NULL,
     request_id uuid NULL,
     job_id uuid NULL,
     draft_id uuid NULL,
@@ -114,6 +123,9 @@ CREATE TABLE IF NOT EXISTS notes (
     CONSTRAINT fk_notes_parent_note FOREIGN KEY (parent_note_id)
         REFERENCES notes (note_id)
         ON DELETE CASCADE,
+    CONSTRAINT fk_notes_owner FOREIGN KEY (owner_id)
+        REFERENCES users (user_id)
+        ON DELETE RESTRICT,
     CONSTRAINT ck_notes_single_parent CHECK (
         (CASE WHEN request_id IS NOT NULL THEN 1 ELSE 0 END) +
         (CASE WHEN job_id IS NOT NULL THEN 1 ELSE 0 END) +

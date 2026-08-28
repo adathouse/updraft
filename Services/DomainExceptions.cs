@@ -28,6 +28,11 @@ public sealed class AssigneeNotFoundException(Guid assigneeId) : Exception("Assi
     public Guid AssigneeId { get; } = assigneeId;
 }
 
+public sealed class UserNotFoundException(Guid userId) : Exception("User was not found.")
+{
+    public Guid UserId { get; } = userId;
+}
+
 public sealed class JobNotFoundException(Guid jobId) : Exception("Job was not found.")
 {
     public Guid JobId { get; } = jobId;
@@ -54,4 +59,9 @@ public sealed class InvalidNoteParentException() : Exception("Exactly one parent
 
 public sealed class InvalidAttachmentParentException() : Exception("Specify either draft or request.")
 {
+}
+
+public sealed class AttachmentNotFoundException(Guid attachmentId) : Exception("Attachment was not found.")
+{
+    public Guid AttachmentId { get; } = attachmentId;
 }

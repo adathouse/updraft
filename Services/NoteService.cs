@@ -3,14 +3,15 @@ using Updraft.Repositories;
 
 namespace Updraft.Services;
 
-public sealed record AddNoteCommand(string Text, Guid? RequestId, Guid? JobId, Guid? DraftId);
-public sealed record ReplyToNoteCommand(Guid ParentNoteId, string Text);
+public sealed record AddNoteCommand(string Text, Guid? OwnerId, Guid? RequestId, Guid? JobId, Guid? DraftId);
+public sealed record ReplyToNoteCommand(Guid ParentNoteId, Guid? OwnerId, string Text);
 
 public sealed class NoteService(
     INoteRepository noteRepository,
     IRequestRepository requestRepository,
     IJobRepository jobRepository,
-    IDraftRepository draftRepository)
+    IDraftRepository draftRepository,
+    IUserRepository userRepository)
 {
     public async Task<Note> AddNoteAsync(AddNoteCommand command, CancellationToken cancellationToken)
     {
@@ -35,10 +36,16 @@ public sealed class NoteService(
             throw new DraftNotFoundException(command.DraftId.Value);
         }
 
+        if (command.OwnerId.HasValue && !await userRepository.ExistsAsync(command.OwnerId.Value, cancellationToken))
+        {
+            throw new UserNotFoundException(command.OwnerId.Value);
+        }
+
         var note = new Note
         {
             NoteId = Guid.NewGuid(),
             Text = command.Text,
+            OwnerId = command.OwnerId,
             RequestId = command.RequestId,
             JobId = command.JobId,
             DraftId = command.DraftId
@@ -57,10 +64,16 @@ public sealed class NoteService(
             throw new NoteNotFoundException(command.ParentNoteId);
         }
 
+        if (command.OwnerId.HasValue && !await userRepository.ExistsAsync(command.OwnerId.Value, cancellationToken))
+        {
+            throw new UserNotFoundException(command.OwnerId.Value);
+        }
+
         var reply = new Note
         {
             NoteId = Guid.NewGuid(),
             Text = command.Text,
+            OwnerId = command.OwnerId,
             ParentNoteId = command.ParentNoteId
         };
 

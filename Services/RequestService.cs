@@ -5,6 +5,7 @@ namespace Updraft.Services;
 
 public sealed record CreateRequestCommand(
     Guid OfficeId,
+    Guid RequesterId,
     string? Proposal,
     string? AmendingBill,
     string? ReintroducingBill,
@@ -35,13 +36,19 @@ public sealed record UpdateRequestCommand(
 public sealed class RequestService(
     IRequestRepository requestRepository,
     IOfficeRepository officeRepository,
-    ITagRepository tagRepository)
+    ITagRepository tagRepository,
+    IUserRepository userRepository)
 {
     public async Task<Request> CreateRequestAsync(CreateRequestCommand command, CancellationToken cancellationToken)
     {
         if (!await officeRepository.ExistsAsync(command.OfficeId, cancellationToken))
         {
             throw new OfficeNotFoundException(command.OfficeId);
+        }
+
+        if (!await userRepository.ExistsAsync(command.RequesterId, cancellationToken))
+        {
+            throw new UserNotFoundException(command.RequesterId);
         }
 
         List<Updraft.Data.Entities.Tag> tags = await tagRepository.GetByIdsAsync(command.TagIds, cancellationToken);
@@ -63,6 +70,7 @@ public sealed class RequestService(
         {
             RequestId = requestId,
             OfficeId = command.OfficeId,
+            RequesterId = command.RequesterId,
             Proposal = command.Proposal,
             AmendingBill = command.AmendingBill,
             ReintroducingBill = command.ReintroducingBill,
