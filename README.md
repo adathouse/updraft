@@ -18,6 +18,13 @@ export PGHOST=db
 export PGPORT=5432
 ```
 
+## App registration 
+
+- name: Updraft - DEV
+- tenant: 4979d838-afe7-4f16-ac52-461bafc329ae
+- client id: 4d67f493-8e21-46ec-825a-afed3b38e9e5
+
+
 ## Flyway migration
 
 Apply schema migrations with Flyway.
@@ -81,6 +88,7 @@ mutation SubmitRequest($input: SubmitRequestInput!) {
     "enforcementResponse": "Civil penalties",
     "timingResponse": "Effective January 4, 2027",
     "existingLawResponse": "Amends the Widget Act of 1998",
+    "requesterId": "2aac9785-5915-44e1-b990-c1dc6198be3e",
     "committeeIds": [],
     "tagIds": []
   }
@@ -113,7 +121,7 @@ mutation AddRequestAttachment($input: AddAttachmentInput!) {
 {
   "input": {
     "role": "INTAKE_SUPPORT",
-    "requestId": "0da34bee-9895-4a5d-9218-ea6f1d4dcd95"
+    "requestId": "8c32da20-3b18-42dc-88a6-aa6edcdb9bd8"
   }
 }
 ```
@@ -123,9 +131,9 @@ Upload the document bytes for the returned `attachmentId`. This is a plain HTTP 
 
 ```bash
 curl -X POST \
-  "http://localhost:5048/attachments/ed029b3d-5d77-4dbf-930d-8745f80c354b/proposal.pdf" \
+  "http://localhost:5048/attachments/85a6a50c-3e21-4ce6-aadb-b0335554b60e/H2821_RH_xml.pdf" \
   -H "Content-Type: application/pdf" \
-  --data-binary @proposal.pdf
+  --data-binary @H2821_RH_xml.pdf
 ```
 
 ### Create a Job
@@ -152,7 +160,7 @@ mutation CreateJob($input: CreateJobInput!) {
 ```json
 {
   "input": {
-    "requestId": "0da34bee-9895-4a5d-9218-ea6f1d4dcd95",
+    "requestId": "8c32da20-3b18-42dc-88a6-aa6edcdb9bd8",
     "assigneeId": "68c4adf8-8d42-4849-a8d5-8afc289d3689",
     "description": "Draft the widget safety bill"
   }
@@ -183,8 +191,9 @@ mutation SubmitDraft($input: SubmitDraftInput!) {
 ```json
 {
   "input": {
-    "jobId": "1c828e45-3aed-4007-b921-086be76f5759",
-    "comment": "First draft for review"
+    "jobId": "d21c7aa4-f48f-4638-ac8b-3476fe95d899",
+    "comment": "First draft for review",
+    "drafterId": "68c4adf8-8d42-4849-a8d5-8afc289d3689"
   }
 }
 ```
@@ -214,7 +223,7 @@ mutation AddDraftAttachment($input: AddAttachmentInput!) {
 {
   "input": {
     "role": "DRAFT",
-    "draftId": "d3aa6719-3f91-49a9-876c-64787a2ef1e2"
+    "draftId": "ea2fa22c-1025-4ccb-b00a-736a44c78f85"
   }
 }
 ```
@@ -223,7 +232,7 @@ Then upload the document bytes for the returned `attachmentId`:
 
 ```bash
 curl -X POST \
-  "http://localhost:5048/attachments/2a063bf2-9123-4c7e-81b6-ed8dd7db296d/draft.docx" \
-  -H "Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document" \
-  --data-binary @draft.docx
+  "http://localhost:5048/attachments/ed94459a-c173-4940-ad5d-9ac038d717ca/H4348_RH_xml.pdf" \
+  -H "Content-Type: application/xml" \
+  --data-binary @H4348_RH_xml.pdf
 ```

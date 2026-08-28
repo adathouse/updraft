@@ -25,6 +25,9 @@ public static partial class RequestObjectType
     public static Task<Office?> GetOfficeAsync([Parent] Request request, IOfficeRepository officeRepository, CancellationToken cancellationToken) =>
         officeRepository.Query().FirstOrDefaultAsync(x => x.OfficeId == request.OfficeId, cancellationToken);
 
+    public static Task<User?> GetRequesterAsync([Parent] Request request, IUserRepository userRepository, CancellationToken cancellationToken) =>
+        userRepository.Query().FirstOrDefaultAsync(x => x.UserId == request.RequesterId, cancellationToken);
+
     [UsePaging]
     [UseFiltering]
     [UseSorting]

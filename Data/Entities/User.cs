@@ -10,4 +10,7 @@ public sealed class User : IChangeTracked
     public Guid ChangeId { get; set; }
 
     public ICollection<Job> AssignedJobs { get; set; } = [];
+    public ICollection<Request> Requests { get; set; } = [];
+    public ICollection<Draft> Drafts { get; set; } = [];
+    public ICollection<Note> OwnedNotes { get; set; } = [];
 }

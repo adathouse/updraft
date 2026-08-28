@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Updraft.Data.Entities;
 using Updraft.Repositories;
 
@@ -24,4 +25,7 @@ public static partial class DraftObjectType
 
     public static Task<Job?> GetJobAsync([Parent] Draft draft, IJobRepository jobRepository, CancellationToken cancellationToken) =>
         jobRepository.GetByIdAsync(draft.JobId, cancellationToken);
+
+    public static Task<User?> GetDrafterAsync([Parent] Draft draft, IUserRepository userRepository, CancellationToken cancellationToken) =>
+        userRepository.Query().FirstOrDefaultAsync(x => x.UserId == draft.DrafterId, cancellationToken);
 }

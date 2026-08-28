@@ -15,4 +15,22 @@ public static partial class UserObjectType
     [UseSorting]
     public static IQueryable<Job> GetAssignedJobs([Parent] User user, IJobRepository jobRepository) =>
         jobRepository.Query().Where(x => x.AssigneeId == user.UserId);
+
+    [UsePaging]
+    [UseFiltering]
+    [UseSorting]
+    public static IQueryable<Request> GetRequests([Parent] User user, IRequestRepository requestRepository) =>
+        requestRepository.Query().Where(x => x.RequesterId == user.UserId);
+
+    [UsePaging]
+    [UseFiltering]
+    [UseSorting]
+    public static IQueryable<Draft> GetDrafts([Parent] User user, IDraftRepository draftRepository) =>
+        draftRepository.Query().Where(x => x.DrafterId == user.UserId);
+
+    [UsePaging]
+    [UseFiltering]
+    [UseSorting]
+    public static IQueryable<Note> GetOwnedNotes([Parent] User user, INoteRepository noteRepository) =>
+        noteRepository.Query().Where(x => x.OwnerId == user.UserId);
 }

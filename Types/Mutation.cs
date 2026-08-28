@@ -13,8 +13,10 @@ public static partial class Mutation
     [Error<OfficeNotFoundException>]
     [Error<TagsNotFoundException>]
     [Error<CommitteesNotFoundException>]
+    [Error<UserNotFoundException>]
     public static Task<Request> SubmitRequestAsync(
         Guid officeId,
+        Guid requesterId,
         string? proposal,
         string? amendingBill,
         string? reintroducingBill,
@@ -32,6 +34,7 @@ public static partial class Mutation
         requestService.CreateRequestAsync(
             new CreateRequestCommand(
                 officeId,
+                requesterId,
                 proposal,
                 amendingBill,
                 reintroducingBill,
@@ -110,14 +113,17 @@ public static partial class Mutation
     //[Authorize(Policy = AuthorizationPolicies.Drafter)]
     [Error<JobNotFoundException>]
     [Error<JobNotOpenException>]
+    [Error<UserNotFoundException>]
     public static Task<Draft> SubmitDraftAsync(
         Guid jobId,
+        Guid drafterId,
         string comment,
         DraftService draftService,
         CancellationToken cancellationToken) =>
         draftService.SubmitDraftAsync(
             new SubmitDraftCommand(
                 jobId,
+                drafterId,
                 comment),
             cancellationToken);
 
@@ -126,26 +132,30 @@ public static partial class Mutation
     [Error<RequestNotFoundException>]
     [Error<JobNotFoundException>]
     [Error<DraftNotFoundException>]
+    [Error<UserNotFoundException>]
     public static Task<Note> AddNoteAsync(
         string text,
+        Guid? ownerId,
         Guid? requestId,
         Guid? jobId,
         Guid? draftId,
         NoteService noteService,
         CancellationToken cancellationToken) =>
         noteService.AddNoteAsync(
-            new AddNoteCommand(text, requestId, jobId, draftId),
+            new AddNoteCommand(text, ownerId, requestId, jobId, draftId),
             cancellationToken);
 
     //[Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [Error<NoteNotFoundException>]
+    [Error<UserNotFoundException>]
     public static Task<Note> ReplyToNoteAsync(
         Guid parentNoteId,
+        Guid? ownerId,
         string text,
         NoteService noteService,
         CancellationToken cancellationToken) =>
         noteService.ReplyToNoteAsync(
-            new ReplyToNoteCommand(parentNoteId, text),
+            new ReplyToNoteCommand(parentNoteId, ownerId, text),
             cancellationToken);
 
     //[Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]

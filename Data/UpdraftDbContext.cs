@@ -68,10 +68,15 @@ public sealed class UpdraftDbContext(DbContextOptions<UpdraftDbContext> options)
             entity.Property(x => x.JobId).HasColumnName("job_id");
             entity.Property(x => x.Comment).HasColumnName("comment").IsRequired();
             entity.Property(x => x.ChangeId).HasColumnName("change_id").HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(x => x.DrafterId).HasColumnName("drafter_id");
             entity.HasOne(x => x.Job)
                 .WithMany(x => x.Drafts)
                 .HasForeignKey(x => x.JobId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Drafter)
+                .WithMany(x => x.Drafts)
+                .HasForeignKey(x => x.DrafterId)
+                .OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(x => x.JobId).HasDatabaseName("idx_drafts_job_id");
         });
 
@@ -104,6 +109,7 @@ public sealed class UpdraftDbContext(DbContextOptions<UpdraftDbContext> options)
             entity.HasKey(x => x.NoteId);
             entity.Property(x => x.NoteId).HasColumnName("note_id");
             entity.Property(x => x.Text).HasColumnName("text").IsRequired();
+            entity.Property(x => x.OwnerId).HasColumnName("owner_id");
             entity.Property(x => x.RequestId).HasColumnName("request_id");
             entity.Property(x => x.JobId).HasColumnName("job_id");
             entity.Property(x => x.DraftId).HasColumnName("draft_id");
@@ -125,6 +131,10 @@ public sealed class UpdraftDbContext(DbContextOptions<UpdraftDbContext> options)
                 .WithMany(x => x.Replies)
                 .HasForeignKey(x => x.ParentNoteId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Owner)
+                .WithMany(x => x.OwnedNotes)
+                .HasForeignKey(x => x.OwnerId)
+                .OnDelete(DeleteBehavior.Restrict);
             entity.ToTable(t => t.HasCheckConstraint(
                 "ck_notes_single_parent",
                 "(CASE WHEN request_id IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN job_id IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN draft_id IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN parent_note_id IS NOT NULL THEN 1 ELSE 0 END) = 1"));
@@ -152,6 +162,7 @@ public sealed class UpdraftDbContext(DbContextOptions<UpdraftDbContext> options)
             entity.HasKey(x => x.RequestId);
             entity.Property(x => x.RequestId).HasColumnName("request_id");
             entity.Property(x => x.OfficeId).HasColumnName("office_id");
+            entity.Property(x => x.RequesterId).HasColumnName("requester_id");
             entity.Property(x => x.Proposal).HasColumnName("proposal");
             entity.Property(x => x.AmendingBill).HasColumnName("amending_bill");
             entity.Property(x => x.ReintroducingBill).HasColumnName("reintroducing_bill");
@@ -167,6 +178,10 @@ public sealed class UpdraftDbContext(DbContextOptions<UpdraftDbContext> options)
             entity.HasOne(x => x.Office)
                 .WithMany(x => x.Requests)
                 .HasForeignKey(x => x.OfficeId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Requester)
+                .WithMany(x => x.Requests)
+                .HasForeignKey(x => x.RequesterId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(x => x.OfficeId).HasDatabaseName("idx_requests_office_id");
             entity.HasIndex(x => x.Status).HasDatabaseName("idx_requests_status");

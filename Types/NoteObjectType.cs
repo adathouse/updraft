@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Updraft.Data.Entities;
 using Updraft.Repositories;
 
@@ -15,4 +16,9 @@ public static partial class NoteObjectType
     [UseSorting]
     public static IQueryable<Note> GetReplies([Parent] Note note, INoteRepository noteRepository) =>
         noteRepository.Query().Where(x => x.ParentNoteId == note.NoteId);
+
+    public static Task<User?> GetOwnerAsync([Parent] Note note, IUserRepository userRepository, CancellationToken cancellationToken) =>
+        note.OwnerId is null
+            ? Task.FromResult<User?>(null)
+            : userRepository.Query().FirstOrDefaultAsync(x => x.UserId == note.OwnerId, cancellationToken);
 }
