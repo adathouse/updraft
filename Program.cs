@@ -119,7 +119,7 @@ builder.Services
 builder.Services
 	.AddGraphQLServer()
 	.AddInstrumentation()
-	//.AddAuthorizationCore()
+	.AddAuthorization()
 	.AddFiltering()
 	.AddSorting()
 	.AddProjections()
@@ -147,7 +147,7 @@ app.MapPost("/attachments/{attachmentId}/{fileName}", async (
 	var command = new AttachDocumentCommand(attachmentId, request.Body, fileName, contentType);
 	var attachment = await attachmentService.AttachDocumentAsync(command, cancellationToken);
 	return Results.Ok(attachment);
-});
+}).RequireAuthorization(AuthorizationPolicies.AnyKnownRole);
 
 // TODO: add a fetch endpoint. The GET should follow the attachment.Uri value
 

@@ -12,7 +12,7 @@
   <ItemGroup>
     <PackageReference Include="Foundatio" Version="13.0.2" />
     <PackageReference Include="HotChocolate.AspNetCore" Version="16.2.0" />
-    <PackageReference Include="HotChocolate.Authorization" Version="16.2.0" />
+    <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="16.2.0" />
     <PackageReference Include="HotChocolate.Data.EntityFramework" Version="16.2.0" />
     <PackageReference Include="HotChocolate.Diagnostics" Version="16.2.0" />
     <PackageReference Include="HotChocolate.Types.Analyzers" Version="16.2.0" />

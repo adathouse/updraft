@@ -1,11 +1,14 @@
 using Updraft.Data.Entities;
 using Updraft.Repositories;
+using HotChocolate.Authorization;
+using Updraft.Security;
 
 namespace Updraft.Types;
 
 [ObjectType<User>]
 public static partial class UserObjectType
 {
+    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [NodeResolver]
     public static Task<User?> GetUserByIdAsync(Guid id, IUserRepository userRepository, CancellationToken cancellationToken) =>
         userRepository.GetByIdAsync(id, cancellationToken);
