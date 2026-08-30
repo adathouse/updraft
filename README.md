@@ -18,15 +18,56 @@ export PGHOST=db
 export PGPORT=5432
 ```
 
-## App registration 
+## App registration
+
+The Entra app registration is used for real tokens in non-dev environments. Local
+development does not require it — see [Local development tokens](#local-development-tokens).
 
 - name: Updraft - DEV
 - tenant: 4979d838-afe7-4f16-ac52-461bafc329ae
 - client id: 4d67f493-8e21-46ec-825a-afed3b38e9e5
 - scope: api://4d67f493-8e21-46ec-825a-afed3b38e9e5/Updraft.Users
 
+## Local development tokens
+
+The API validates JWTs. For local development, mint tokens with the built-in
+[`dotnet user-jwts`](https://learn.microsoft.com/aspnet/core/security/authentication/jwt-authn)
+tool — no Entra sign-in required. The tool stores a dev signing key in user secrets and
+writes the issuer/audience into configuration, which the JwtBearer handler validates
+against automatically. The default audience is taken from `launchSettings.json`
+(`http://0.0.0.0:5048`), so no `--audience` flag is needed.
+
+NOTE: You must create the token before you start the service.
+
+Create a token for each role you want to test (roles: `Requester`, `Drafter`, `FrontOffice`):
+
+```bash
+dotnet user-jwts create --role Requester
+dotnet user-jwts create --role Drafter
+dotnet user-jwts create --role FrontOffice
 ```
-dotnet user-jwts create --scheme Bearer --audience api://4d67f493-… --role Requester --claim oid=<entra_id>
+
+Optionally add an Entra object id claim to link the token to a user row:
+
+```bash
+dotnet user-jwts create --role Requester --claim oid=<entra_id>
+```
+
+Send the printed token in the `Authorization` header (scheme `Bearer`) on both `/graphql`
+requests and attachment uploads:
+
+```bash
+curl http://localhost:5048/graphql \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ requests { nodes { requestId } } }"}'
+```
+
+List or remove existing dev tokens:
+
+```bash
+dotnet user-jwts list
+dotnet user-jwts clear
 ```
 
 

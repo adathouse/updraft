@@ -1,6 +1,6 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Foundatio.Storage;
 using Updraft.Data;
 using Updraft.Repositories;
@@ -13,14 +13,31 @@ builder.Services
 	.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 	.AddJwtBearer(options =>
 	{
+		// Local dev tokens are minted with `dotnet user-jwts`, which writes the issuer,
+		// audiences, and signing key into configuration (Authentication:Schemes:Bearer)
+		// plus user secrets. The JwtBearer handler binds that config automatically, so we
+		// only enable validation here and leave https off for local http.
 		options.RequireHttpsMetadata = false;
-		options.TokenValidationParameters = new TokenValidationParameters
-		{
-			ValidateIssuer = false,
-			ValidateAudience = false,
-			ValidateIssuerSigningKey = false,
-			ValidateLifetime = true
-		};
+		options.TokenValidationParameters.ValidateIssuer = true;
+		options.TokenValidationParameters.ValidateAudience = true;
+		options.TokenValidationParameters.ValidateIssuerSigningKey = true;
+		options.TokenValidationParameters.ValidateLifetime = true;
+		// user-jwts emits roles in the "role" claim; RequireRole matches ClaimTypes.Role.
+		options.TokenValidationParameters.RoleClaimType = ClaimTypes.Role;
+
+		// TODO (Entra): outside Development, validate against the Updraft - DEV app
+		// registration instead of the user-jwts dev key. Entra app roles arrive in the
+		// "roles" claim, so RoleClaimType must change to match.
+		//   tenant:    4979d838-afe7-4f16-ac52-461bafc329ae
+		//   client id: 4d67f493-8e21-46ec-825a-afed3b38e9e5
+		//   audience:  api://4d67f493-8e21-46ec-825a-afed3b38e9e5
+		// if (!builder.Environment.IsDevelopment())
+		// {
+		//     options.Authority = "https://login.microsoftonline.com/4979d838-afe7-4f16-ac52-461bafc329ae/v2.0";
+		//     options.Audience = "api://4d67f493-8e21-46ec-825a-afed3b38e9e5";
+		//     options.RequireHttpsMetadata = true;
+		//     options.TokenValidationParameters.RoleClaimType = "roles";
+		// }
 	});
 
 builder.Services.AddAuthorization(options =>
