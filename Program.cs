@@ -1,7 +1,12 @@
+using System.Diagnostics;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Foundatio.Storage;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Updraft.Data;
 using Updraft.Repositories;
 using Updraft.Security;
@@ -24,6 +29,18 @@ builder.Services
 		options.TokenValidationParameters.ValidateLifetime = true;
 		// user-jwts emits roles in the "role" claim; RequireRole matches ClaimTypes.Role.
 		options.TokenValidationParameters.RoleClaimType = ClaimTypes.Role;
+
+		// JwtBearer swallows validation failures into a 401, so surface them on the request span.
+		options.Events = new JwtBearerEvents
+		{
+			OnAuthenticationFailed = context =>
+			{
+				var activity = Activity.Current;
+				activity?.AddException(context.Exception);
+				activity?.SetStatus(ActivityStatusCode.Error, context.Exception.Message);
+				return Task.CompletedTask;
+			}
+		};
 
 		// TODO (Entra): outside Development, validate against the Updraft - DEV app
 		// registration instead of the user-jwts dev key. Entra app roles arrive in the
@@ -80,8 +97,28 @@ builder.Services.AddScoped<NoteService>();
 builder.Services.AddScoped<RequestService>();
 builder.Services.AddScoped<AttachmentService>();
 
+// Endpoint is configured via OTEL_EXPORTER_OTLP_PROTOCOL and OTEL_EXPORTER_OTLP_ENDPOINT.
+builder.Logging.AddOpenTelemetry(logging =>
+{
+	logging.IncludeFormattedMessage = true;
+	logging.IncludeScopes = true;
+});
+
+builder.Services
+	.AddOpenTelemetry()
+	.ConfigureResource(resource => resource.AddService("Updraft"))
+	.WithTracing(tracing => tracing
+		.AddAspNetCoreInstrumentation(o => o.RecordException = true)
+		.AddHttpClientInstrumentation()
+		.AddHotChocolateInstrumentation())
+	.WithMetrics(metrics => metrics
+		.AddAspNetCoreInstrumentation()
+		.AddHttpClientInstrumentation())
+	.UseOtlpExporter();
+
 builder.Services
 	.AddGraphQLServer()
+	.AddInstrumentation()
 	//.AddAuthorizationCore()
 	.AddFiltering()
 	.AddSorting()
