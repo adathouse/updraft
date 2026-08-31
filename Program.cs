@@ -97,6 +97,8 @@ builder.Services.AddScoped<IRequestRepository, RequestRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
+builder.Services.AddScoped<ICurrentUserResolver, CurrentUserResolver>();
+
 builder.Services.AddScoped<DraftService>();
 builder.Services.AddScoped<JobService>();
 builder.Services.AddScoped<NoteService>();
@@ -156,12 +158,16 @@ app.MapPost("/attachments/{attachmentId}/{fileName}", async (
 	HttpRequest request,
 	Guid attachmentId,
 	string fileName,
+	ClaimsPrincipal user,
+	ICurrentUserResolver currentUserResolver,
 	AttachmentService attachmentService,
 	CancellationToken cancellationToken) =>
 {
+	CurrentUser currentUser = await currentUserResolver.ResolveAsync(user, cancellationToken)
+		?? throw new UnknownUserException();
 	var contentType = request.ContentType ?? "application/octet-stream";
 	var command = new AttachDocumentCommand(attachmentId, request.Body, fileName, contentType);
-	var attachment = await attachmentService.AttachDocumentAsync(command, cancellationToken);
+	var attachment = await attachmentService.AttachDocumentAsync(command, currentUser, cancellationToken);
 	return Results.Ok(attachment);
 }).RequireAuthorization(AuthorizationPolicies.AnyKnownRole);
 

@@ -1,5 +1,6 @@
 using Updraft.Data.Entities;
 using Updraft.Repositories;
+using Updraft.Security;
 
 namespace Updraft.Services;
 
@@ -46,12 +47,17 @@ public sealed class JobService(
         return job;
     }
 
-    public async Task<Job> UpdateJobAsync(UpdateJobCommand command, CancellationToken cancellationToken)
+    public async Task<Job> UpdateJobAsync(UpdateJobCommand command, CurrentUser currentUser, CancellationToken cancellationToken)
     {
         Job? job = await jobRepository.GetByIdAsync(command.JobId, cancellationToken);
         if (job is null)
         {
             throw new JobNotFoundException(command.JobId);
+        }
+
+        if (!currentUser.IsFrontOffice && job.AssigneeId != currentUser.UserId)
+        {
+            throw new ForbiddenAccessException();
         }
 
         if (job.AssigneeId != command.AssigneeId

@@ -1,11 +1,11 @@
 using Updraft.Data.Entities;
 using Updraft.Repositories;
+using Updraft.Security;
 
 namespace Updraft.Services;
 
 public sealed record CreateRequestCommand(
     Guid OfficeId,
-    Guid RequesterId,
     string? Proposal,
     string? AmendingBill,
     string? ReintroducingBill,
@@ -36,19 +36,13 @@ public sealed record UpdateRequestCommand(
 public sealed class RequestService(
     IRequestRepository requestRepository,
     IOfficeRepository officeRepository,
-    ITagRepository tagRepository,
-    IUserRepository userRepository)
+    ITagRepository tagRepository)
 {
-    public async Task<Request> CreateRequestAsync(CreateRequestCommand command, CancellationToken cancellationToken)
+    public async Task<Request> CreateRequestAsync(CreateRequestCommand command, CurrentUser currentUser, CancellationToken cancellationToken)
     {
         if (!await officeRepository.ExistsAsync(command.OfficeId, cancellationToken))
         {
             throw new OfficeNotFoundException(command.OfficeId);
-        }
-
-        if (!await userRepository.ExistsAsync(command.RequesterId, cancellationToken))
-        {
-            throw new UserNotFoundException(command.RequesterId);
         }
 
         List<Updraft.Data.Entities.Tag> tags = await tagRepository.GetByIdsAsync(command.TagIds, cancellationToken);
@@ -70,7 +64,7 @@ public sealed class RequestService(
         {
             RequestId = requestId,
             OfficeId = command.OfficeId,
-            RequesterId = command.RequesterId,
+            RequesterId = currentUser.UserId,
             Proposal = command.Proposal,
             AmendingBill = command.AmendingBill,
             ReintroducingBill = command.ReintroducingBill,
@@ -102,12 +96,17 @@ public sealed class RequestService(
         return request;
     }
 
-    public async Task<Request> UpdateRequestAsync(UpdateRequestCommand command, CancellationToken cancellationToken)
+    public async Task<Request> UpdateRequestAsync(UpdateRequestCommand command, CurrentUser currentUser, CancellationToken cancellationToken)
     {
         Request? request = await requestRepository.GetByIdAsync(command.RequestId, cancellationToken);
         if (request is null)
         {
             throw new RequestNotFoundException(command.RequestId);
+        }
+
+        if (request.RequesterId != currentUser.UserId)
+        {
+            throw new ForbiddenAccessException();
         }
 
         request.Proposal = command.Proposal;

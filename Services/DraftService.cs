@@ -1,16 +1,16 @@
 using Updraft.Data.Entities;
 using Updraft.Repositories;
+using Updraft.Security;
 
 namespace Updraft.Services;
 
-public sealed record SubmitDraftCommand(Guid JobId, Guid DrafterId, string Comment);
+public sealed record SubmitDraftCommand(Guid JobId, string Comment);
 
 public sealed class DraftService(
     IJobRepository jobRepository,
-    IDraftRepository draftRepository,
-    IUserRepository userRepository)
+    IDraftRepository draftRepository)
 {
-    public async Task<Draft> SubmitDraftAsync(SubmitDraftCommand command, CancellationToken cancellationToken)
+    public async Task<Draft> SubmitDraftAsync(SubmitDraftCommand command, CurrentUser currentUser, CancellationToken cancellationToken)
     {
         Job? job = await jobRepository.GetByIdAsync(command.JobId, cancellationToken);
         if (job is null)
@@ -23,9 +23,9 @@ public sealed class DraftService(
             throw new JobNotOpenException(command.JobId);
         }
 
-        if (!await userRepository.ExistsAsync(command.DrafterId, cancellationToken))
+        if (job.AssigneeId != currentUser.UserId)
         {
-            throw new UserNotFoundException(command.DrafterId);
+            throw new ForbiddenAccessException();
         }
 
         var draftId = Guid.NewGuid();
@@ -33,7 +33,7 @@ public sealed class DraftService(
         {
             DraftId = draftId,
             JobId = command.JobId,
-            DrafterId = command.DrafterId,
+            DrafterId = currentUser.UserId,
             Comment = command.Comment
         };
 

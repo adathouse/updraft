@@ -2,8 +2,6 @@ using HotChocolate.AspNetCore;
 using HotChocolate.Execution;
 using HotChocolate.Execution.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Updraft.Data.Entities;
-using Updraft.Repositories;
 
 namespace Updraft.Security;
 
@@ -16,30 +14,9 @@ public sealed class CurrentUserRequestInterceptor : DefaultHttpRequestIntercepto
         OperationRequestBuilder requestBuilder,
         CancellationToken cancellationToken)
     {
-        requestBuilder.SetGlobalState(CurrentUserAttribute.StateKey, await ResolveAsync(context, cancellationToken));
+        ICurrentUserResolver resolver = context.RequestServices.GetRequiredService<ICurrentUserResolver>();
+        CurrentUser? currentUser = await resolver.ResolveAsync(context.User, cancellationToken);
+        requestBuilder.SetGlobalState(CurrentUserAttribute.StateKey, currentUser);
         await base.OnCreateAsync(context, requestExecutor, requestBuilder, cancellationToken);
-    }
-
-    private static async ValueTask<CurrentUser?> ResolveAsync(HttpContext context, CancellationToken cancellationToken)
-    {
-        PrincipalIdentity? identity = PrincipalIdentity.FromPrincipal(context.User);
-        if (identity is null)
-        {
-            return null;
-        }
-
-        IUserRepository userRepository = context.RequestServices.GetRequiredService<IUserRepository>();
-        User? user = await userRepository.GetByEntraIdAsync(identity.EntraId, cancellationToken);
-        if (user is null)
-        {
-            return null;
-        }
-
-        return new CurrentUser(
-            user.UserId,
-            user.EntraId,
-            identity.Roles.Contains(RoleNames.Requester),
-            identity.Roles.Contains(RoleNames.Drafter),
-            identity.Roles.Contains(RoleNames.FrontOffice));
     }
 }

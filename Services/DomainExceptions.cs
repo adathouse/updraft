@@ -37,6 +37,10 @@ public sealed class UnknownUserException() : Exception("The authenticated user i
 {
 }
 
+public sealed class ForbiddenAccessException() : Exception("You do not have access to the requested resource.")
+{
+}
+
 public sealed class JobNotFoundException(Guid jobId) : Exception("Job was not found.")
 {
     public Guid JobId { get; } = jobId;

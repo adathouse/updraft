@@ -184,7 +184,6 @@ mutation SubmitRequest($input: SubmitRequestInput!) {
     "enforcementResponse": "Civil penalties",
     "timingResponse": "Effective January 4, 2027",
     "existingLawResponse": "Amends the Widget Act of 1998",
-    "requesterId": "2aac9785-5915-44e1-b990-c1dc6198be3e",
     "committeeIds": [],
     "tagIds": []
   }
@@ -288,8 +287,7 @@ mutation SubmitDraft($input: SubmitDraftInput!) {
 {
   "input": {
     "jobId": "d21c7aa4-f48f-4638-ac8b-3476fe95d899",
-    "comment": "First draft for review",
-    "drafterId": "68c4adf8-8d42-4849-a8d5-8afc289d3689"
+    "comment": "First draft for review"
   }
 }
 ```
