@@ -91,11 +91,15 @@ builder.Services.AddScoped<IRequestRepository, RequestRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserAccessor, CurrentUserAccessor>();
+
 builder.Services.AddScoped<DraftService>();
 builder.Services.AddScoped<JobService>();
 builder.Services.AddScoped<NoteService>();
 builder.Services.AddScoped<RequestService>();
 builder.Services.AddScoped<AttachmentService>();
+builder.Services.AddScoped<UserService>();
 
 // Only enable OpenTelemetry when explicitly enabled (OTEL_SDK_DISABLED=false) and an OTLP
 // endpoint is configured (OTEL_EXPORTER_OTLP_ENDPOINT); otherwise leave the integration off.

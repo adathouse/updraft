@@ -9,6 +9,12 @@ namespace Updraft.Types;
 [MutationType]
 public static partial class Mutation
 {
+    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
+    public static Task<User> RegisterCurrentUserAsync(
+        UserService userService,
+        CancellationToken cancellationToken) =>
+        userService.RegisterCurrentUserAsync(cancellationToken);
+
     [Authorize(Policy = AuthorizationPolicies.Requester)]
     [Error<OfficeNotFoundException>]
     [Error<TagsNotFoundException>]
