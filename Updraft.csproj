@@ -7,6 +7,8 @@
     <RootNamespace>Updraft</RootNamespace>
     <AssemblyName>Updraft</AssemblyName>
     <UserSecretsId>b7e2c9a4-1d3f-4e8a-9c6b-2f5a8d0e1c74</UserSecretsId>
+    <!-- The test project lives under tests/; keep it out of the app's default item globs. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);tests/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

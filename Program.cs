@@ -160,3 +160,6 @@ app.MapPost("/attachments/{attachmentId}/{fileName}", async (
 // TODO: add a fetch endpoint. The GET should follow the attachment.Uri value
 
 app.Run();
+
+// Exposed so the integration test host (WebApplicationFactory<Program>) can reference the app.
+public partial class Program;

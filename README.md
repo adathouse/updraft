@@ -71,6 +71,20 @@ dotnet user-jwts clear
 ```
 
 
+## Running the tests
+
+Integration tests live in `tests/Updraft.Tests` and boot the API in-memory with
+`WebApplicationFactory`. They mint their own JWTs with a dedicated test signing key, so no
+`dotnet user-jwts` setup is required. A reachable PostgreSQL database (see
+[Connection environment](#connection-environment)) is required for the authorized-path tests.
+
+From the repository root:
+
+```bash
+dotnet test tests/Updraft.Tests
+```
+
+
 ## Flyway migration
 
 Apply schema migrations with Flyway.
