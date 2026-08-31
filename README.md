@@ -39,19 +39,55 @@ against automatically. The default audience is taken from `launchSettings.json`
 
 NOTE: You must create the token before you start the service.
 
-Create a token for each role you want to test (roles: `Requester`, `Drafter`, `FrontOffice`):
+### Required claims
+
+`CurrentUserAccessor.GetPrincipalIdentity()` builds a `PrincipalIdentity` from the claims
+below. The JwtBearer handler maps the short JWT claim names to .NET `ClaimTypes` through its
+default inbound map, so the token must carry the JWT claim in the third column:
+
+| PrincipalIdentity field | .NET claim (`ClaimTypes`) | JWT claim | `dotnet user-jwts` flag |
+| --- | --- | --- | --- |
+| `EntraId` | `NameIdentifier` | `sub` | `--name` |
+| `Name` | `Name` | `unique_name` | `--name` |
+| `Email` | `Email` | `email` | `--claim email=<email>` |
+| `Roles` | `Role` | `role` | `--role <role>` (repeatable) |
+
+`EntraId` is the value used to create and later find the row in the `users` table, so it
+must be stable. `--name` sets **both** `sub` (→ `EntraId`) and `unique_name` (→ `Name`), so
+the value you pass to `--name` is stored as the user's `entra_id` and doubles as the display
+name. Do not try to override `sub` with `--claim sub=...`; that emits a second `sub` value
+and the mapping keeps the `--name` value instead.
+
+Mint a token that carries every field, one per role (roles: `Requester`, `Drafter`,
+`FrontOffice`):
 
 ```bash
-dotnet user-jwts create --role Requester
-dotnet user-jwts create --role Drafter
-dotnet user-jwts create --role FrontOffice
+dotnet user-jwts create --name "entra-requester-001"   --claim email=requester@example.com   --role Requester
+dotnet user-jwts create --name "entra-drafter-001"     --claim email=drafter@example.com     --role Drafter
+dotnet user-jwts create --name "entra-frontoffice-001" --claim email=frontoffice@example.com --role FrontOffice
 ```
 
-Optionally add an Entra object id claim to link the token to a user row:
+Assign multiple roles by repeating `--role`:
 
 ```bash
-dotnet user-jwts create --role Requester --claim oid=<entra_id>
+dotnet user-jwts create --name "entra-lead-001" --claim email=lead@example.com --role Drafter --role FrontOffice
 ```
+
+### Register the user row
+
+On first use, tie the token's identity to a `users` row with the `registerCurrentUser`
+mutation. It reads the claims above and inserts `entra_id`, `name`, `email`, and the
+comma-joined `roles`; it is idempotent and returns the existing row on later calls:
+
+```bash
+curl http://localhost:5048/graphql \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"mutation { registerCurrentUser { user { userId entraId name email roles } } }"}'
+```
+
+After registering, the same token resolves to that user on every request; a token whose
+identity has not been registered is rejected as an unknown user.
 
 Send the printed token in the `Authorization` header (scheme `Bearer`) on both `/graphql`
 requests and attachment uploads:
