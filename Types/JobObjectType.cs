@@ -1,11 +1,14 @@
 using Updraft.Data.Entities;
 using Updraft.Repositories;
+using HotChocolate.Authorization;
+using Updraft.Security;
 
 namespace Updraft.Types;
 
 [ObjectType<Job>]
 public static partial class JobObjectType
 {
+    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [NodeResolver]
     public static Task<Job?> GetJobByIdAsync(Guid id, IJobRepository jobRepository, CancellationToken cancellationToken) =>
         jobRepository.GetByIdAsync(id, cancellationToken);

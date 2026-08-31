@@ -1,11 +1,14 @@
 using Updraft.Data.Entities;
 using Updraft.Repositories;
+using HotChocolate.Authorization;
+using Updraft.Security;
 
 namespace Updraft.Types;
 
 [ObjectType<Attachment>]
 public static partial class AttachmentObjectType
 {
+    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [NodeResolver]
     public static Task<Attachment?> GetAttachmentByIdAsync(Guid id, IAttachmentRepository attachmentRepository, CancellationToken cancellationToken) =>
         attachmentRepository.GetByIdAsync(id, cancellationToken);

@@ -9,7 +9,7 @@ namespace Updraft.Types;
 [MutationType]
 public static partial class Mutation
 {
-    //[Authorize(Policy = AuthorizationPolicies.Requester)]
+    [Authorize(Policy = AuthorizationPolicies.Requester)]
     [Error<OfficeNotFoundException>]
     [Error<TagsNotFoundException>]
     [Error<CommitteesNotFoundException>]
@@ -49,7 +49,7 @@ public static partial class Mutation
                 tagIds),
             cancellationToken);
 
-    //[Authorize(Policy = AuthorizationPolicies.Requester)]
+    [Authorize(Policy = AuthorizationPolicies.Requester)]
     [Error<RequestNotFoundException>]
     public static Task<Request> UpdateRequestAsync(
         Guid requestId,
@@ -82,7 +82,7 @@ public static partial class Mutation
                 status),
             cancellationToken);
 
-    //[Authorize(Policy = AuthorizationPolicies.FrontOffice)]
+    [Authorize(Policy = AuthorizationPolicies.FrontOffice)]
     [Error<RequestNotFoundException>]
     [Error<RequestNotUnassignedException>]
     [Error<AssigneeNotFoundException>]
@@ -96,7 +96,7 @@ public static partial class Mutation
             new CreateJobCommand(requestId, assigneeId, description),
             cancellationToken);
 
-    //[Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
+    [Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
     [Error<JobNotFoundException>]
     [Error<AssigneeNotFoundException>]
     public static Task<Job> UpdateJobAsync(
@@ -110,7 +110,7 @@ public static partial class Mutation
             new UpdateJobCommand(jobId, assigneeId, description, status),
             cancellationToken);
 
-    //[Authorize(Policy = AuthorizationPolicies.Drafter)]
+    [Authorize(Policy = AuthorizationPolicies.Drafter)]
     [Error<JobNotFoundException>]
     [Error<JobNotOpenException>]
     [Error<UserNotFoundException>]
@@ -127,7 +127,7 @@ public static partial class Mutation
                 comment),
             cancellationToken);
 
-    //[Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
+    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [Error<InvalidNoteParentException>]
     [Error<RequestNotFoundException>]
     [Error<JobNotFoundException>]
@@ -145,7 +145,7 @@ public static partial class Mutation
             new AddNoteCommand(text, ownerId, requestId, jobId, draftId),
             cancellationToken);
 
-    //[Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
+    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [Error<NoteNotFoundException>]
     [Error<UserNotFoundException>]
     public static Task<Note> ReplyToNoteAsync(
@@ -158,7 +158,7 @@ public static partial class Mutation
             new ReplyToNoteCommand(parentNoteId, ownerId, text),
             cancellationToken);
 
-    //[Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
+    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [Error<RequestNotFoundException>]
     [Error<DraftNotFoundException>]
     [Error<InvalidAttachmentParentException>]

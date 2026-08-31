@@ -8,42 +8,42 @@ namespace Updraft.Types;
 [QueryType]
 public static partial class Query
 {
-    //[Authorize(Policy = AuthorizationPolicies.FrontOffice)]
+    [Authorize(Policy = AuthorizationPolicies.FrontOffice)]
     [UsePaging]
     [UseFiltering]
     [UseSorting]
     public static IQueryable<Request> GetRequests(IRequestRepository requestRepository) =>
         requestRepository.Query();
 
-    //[Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
+    [Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
     [UsePaging]
     [UseFiltering]
     [UseSorting]
     public static IQueryable<Job> GetJobs(IJobRepository jobRepository) =>
         jobRepository.Query();
 
-    //[Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
+    [Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
     [UsePaging]
     [UseFiltering]
     [UseSorting]
     public static IQueryable<Draft> GetDrafts(IDraftRepository draftsRepository) =>
         draftsRepository.Query();
 
-    //[Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
+    [Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
     [UsePaging]
     [UseFiltering]
     [UseSorting]
     public static IQueryable<Office> GetOffices(IOfficeRepository officesRepository) =>
         officesRepository.Query();
 
-    //[Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
+    [Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
     [UsePaging]
     [UseFiltering]
     [UseSorting]
     public static IQueryable<User> GetUsers(IUserRepository usersRepository) =>
         usersRepository.Query();
 
-    //[Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
+    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [UsePaging]
     [UseFiltering]
     [UseSorting]
@@ -80,6 +80,7 @@ public static partial class Query
         return query.Where(x => x.ParentNoteId == parentNoteId!.Value);
     }
 
+    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [UsePaging]
     [UseFiltering]
     [UseSorting]

@@ -6,17 +6,23 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Updraft</RootNamespace>
     <AssemblyName>Updraft</AssemblyName>
+    <UserSecretsId>b7e2c9a4-1d3f-4e8a-9c6b-2f5a8d0e1c74</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Foundatio" Version="13.0.2" />
     <PackageReference Include="HotChocolate.AspNetCore" Version="16.2.0" />
-    <PackageReference Include="HotChocolate.Authorization" Version="16.2.0" />
+    <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="16.2.0" />
     <PackageReference Include="HotChocolate.Data.EntityFramework" Version="16.2.0" />
+    <PackageReference Include="HotChocolate.Diagnostics" Version="16.2.0" />
     <PackageReference Include="HotChocolate.Types.Analyzers" Version="16.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.18.0" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.18.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.18.0" />
   </ItemGroup>
 
 </Project>

@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Updraft.Data.Entities;
 using Updraft.Repositories;
 using EntityTag = Updraft.Data.Entities.Tag;
+using HotChocolate.Authorization;
+using Updraft.Security;
 
 namespace Updraft.Types;
 
@@ -15,6 +17,7 @@ public static partial class RequestObjectType
         descriptor.Ignore(x => x.RequestCommittees);
     }
 
+    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [NodeResolver]
     public static Task<Request?> GetRequestByIdAsync(Guid id, IRequestRepository requestRepository, CancellationToken cancellationToken) =>
         requestRepository.GetByIdAsync(id, cancellationToken);

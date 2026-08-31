@@ -1,12 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Updraft.Data.Entities;
 using Updraft.Repositories;
+using HotChocolate.Authorization;
+using Updraft.Security;
 
 namespace Updraft.Types;
 
 [ObjectType<Note>]
 public static partial class NoteObjectType
 {
+    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [NodeResolver]
     public static Task<Note?> GetNoteByIdAsync(Guid id, INoteRepository noteRepository, CancellationToken cancellationToken) =>
         noteRepository.GetByIdAsync(id, cancellationToken);

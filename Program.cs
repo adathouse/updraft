@@ -1,7 +1,12 @@
+using System.Diagnostics;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Foundatio.Storage;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Updraft.Data;
 using Updraft.Repositories;
 using Updraft.Security;
@@ -13,14 +18,43 @@ builder.Services
 	.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 	.AddJwtBearer(options =>
 	{
+		// Local dev tokens are minted with `dotnet user-jwts`, which writes the issuer,
+		// audiences, and signing key into configuration (Authentication:Schemes:Bearer)
+		// plus user secrets. The JwtBearer handler binds that config automatically, so we
+		// only enable validation here and leave https off for local http.
 		options.RequireHttpsMetadata = false;
-		options.TokenValidationParameters = new TokenValidationParameters
+		options.TokenValidationParameters.ValidateIssuer = true;
+		options.TokenValidationParameters.ValidateAudience = true;
+		options.TokenValidationParameters.ValidateIssuerSigningKey = true;
+		options.TokenValidationParameters.ValidateLifetime = true;
+		// user-jwts emits roles in the "role" claim; RequireRole matches ClaimTypes.Role.
+		options.TokenValidationParameters.RoleClaimType = ClaimTypes.Role;
+
+		// JwtBearer swallows validation failures into a 401, so surface them on the request span.
+		options.Events = new JwtBearerEvents
 		{
-			ValidateIssuer = false,
-			ValidateAudience = false,
-			ValidateIssuerSigningKey = false,
-			ValidateLifetime = true
+			OnAuthenticationFailed = context =>
+			{
+				var activity = Activity.Current;
+				activity?.AddException(context.Exception);
+				activity?.SetStatus(ActivityStatusCode.Error, context.Exception.Message);
+				return Task.CompletedTask;
+			}
 		};
+
+		// TODO (Entra): outside Development, validate against the Updraft - DEV app
+		// registration instead of the user-jwts dev key. Entra app roles arrive in the
+		// "roles" claim, so RoleClaimType must change to match.
+		//   tenant:    4979d838-afe7-4f16-ac52-461bafc329ae
+		//   client id: 4d67f493-8e21-46ec-825a-afed3b38e9e5
+		//   audience:  api://4d67f493-8e21-46ec-825a-afed3b38e9e5
+		// if (!builder.Environment.IsDevelopment())
+		// {
+		//     options.Authority = "https://login.microsoftonline.com/4979d838-afe7-4f16-ac52-461bafc329ae/v2.0";
+		//     options.Audience = "api://4d67f493-8e21-46ec-825a-afed3b38e9e5";
+		//     options.RequireHttpsMetadata = true;
+		//     options.TokenValidationParameters.RoleClaimType = "roles";
+		// }
 	});
 
 builder.Services.AddAuthorization(options =>
@@ -63,9 +97,29 @@ builder.Services.AddScoped<NoteService>();
 builder.Services.AddScoped<RequestService>();
 builder.Services.AddScoped<AttachmentService>();
 
+// Endpoint is configured via OTEL_EXPORTER_OTLP_PROTOCOL and OTEL_EXPORTER_OTLP_ENDPOINT.
+builder.Logging.AddOpenTelemetry(logging =>
+{
+	logging.IncludeFormattedMessage = true;
+	logging.IncludeScopes = true;
+});
+
+builder.Services
+	.AddOpenTelemetry()
+	.ConfigureResource(resource => resource.AddService("Updraft"))
+	.WithTracing(tracing => tracing
+		.AddAspNetCoreInstrumentation(o => o.RecordException = true)
+		.AddHttpClientInstrumentation()
+		.AddHotChocolateInstrumentation())
+	.WithMetrics(metrics => metrics
+		.AddAspNetCoreInstrumentation()
+		.AddHttpClientInstrumentation())
+	.UseOtlpExporter();
+
 builder.Services
 	.AddGraphQLServer()
-	//.AddAuthorizationCore()
+	.AddInstrumentation()
+	.AddAuthorization()
 	.AddFiltering()
 	.AddSorting()
 	.AddProjections()
@@ -93,7 +147,7 @@ app.MapPost("/attachments/{attachmentId}/{fileName}", async (
 	var command = new AttachDocumentCommand(attachmentId, request.Body, fileName, contentType);
 	var attachment = await attachmentService.AttachDocumentAsync(command, cancellationToken);
 	return Results.Ok(attachment);
-});
+}).RequireAuthorization(AuthorizationPolicies.AnyKnownRole);
 
 // TODO: add a fetch endpoint. The GET should follow the attachment.Uri value
 

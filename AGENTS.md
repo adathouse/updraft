@@ -27,7 +27,7 @@ The project must build with zero warnings and zero errors before any change is c
 - **Repository layer** - Updraft uses EFCore to interface with a Postgres database. All database access should be routed through the repository layer. 
 - **BLOB storage** - Updraft uses Foundatio to interface with BLOB storage and store all files. 
 - **Database** - Updraft uses a Postgres database to store structured data. flyway manages ALL schema/DDL; EFCore is used strictly as an ORM (EF Core migrations are disabled — do not generate or apply them).
-- **Authorization** - Access is role-based using Hot Chocolate `[Authorize]` policies. Roles (`Requester`, `Drafter`, `FrontOffice`) are sourced from the authenticated user's JWT/Entra claims. Annotate mutations and resolvers with the appropriate policy.
+- **Authorization** - Access is role-based using Hot Chocolate `[Authorize]` policies, enforced on every query and mutation, on the `[NodeResolver]` entry points (so global object identification cannot bypass them), and on the REST attachment upload endpoint. Policies are defined in `Security/AuthorizationPolicies.cs`: `Requester`, `Drafter`, `FrontOffice`, `DrafterOrFrontOffice`, and `AnyKnownRole`. Roles come from the authenticated user's JWT `role` claim (`RoleClaimType = ClaimTypes.Role`); Entra validation is stubbed for non-dev environments (see `Program.cs`). Annotate any new mutation, resolver, or node resolver with the appropriate policy. For local development, mint tokens with `dotnet user-jwts` (see `README.md`); the token must be created before the service starts so the signing key/audience config is loaded.
 
 ## Naming
 

@@ -1,12 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Updraft.Data.Entities;
 using Updraft.Repositories;
+using HotChocolate.Authorization;
+using Updraft.Security;
 
 namespace Updraft.Types;
 
 [ObjectType<Draft>]
 public static partial class DraftObjectType
 {
+    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [NodeResolver]
     public static Task<Draft?> GetDraftByIdAsync(Guid id, IDraftRepository draftRepository, CancellationToken cancellationToken) =>
         draftRepository.GetByIdAsync(id, cancellationToken);
