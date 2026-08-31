@@ -97,24 +97,32 @@ builder.Services.AddScoped<NoteService>();
 builder.Services.AddScoped<RequestService>();
 builder.Services.AddScoped<AttachmentService>();
 
-// Endpoint is configured via OTEL_EXPORTER_OTLP_PROTOCOL and OTEL_EXPORTER_OTLP_ENDPOINT.
-builder.Logging.AddOpenTelemetry(logging =>
-{
-	logging.IncludeFormattedMessage = true;
-	logging.IncludeScopes = true;
-});
+// Only enable OpenTelemetry when explicitly enabled (OTEL_SDK_DISABLED=false) and an OTLP
+// endpoint is configured (OTEL_EXPORTER_OTLP_ENDPOINT); otherwise leave the integration off.
+var otelEnabled =
+	string.Equals(Environment.GetEnvironmentVariable("OTEL_SDK_DISABLED"), "false", StringComparison.OrdinalIgnoreCase)
+	&& !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT"));
 
-builder.Services
-	.AddOpenTelemetry()
-	.ConfigureResource(resource => resource.AddService("Updraft"))
-	.WithTracing(tracing => tracing
-		.AddAspNetCoreInstrumentation(o => o.RecordException = true)
-		.AddHttpClientInstrumentation()
-		.AddHotChocolateInstrumentation())
-	.WithMetrics(metrics => metrics
-		.AddAspNetCoreInstrumentation()
-		.AddHttpClientInstrumentation())
-	.UseOtlpExporter();
+if (otelEnabled)
+{
+	builder.Logging.AddOpenTelemetry(logging =>
+	{
+		logging.IncludeFormattedMessage = true;
+		logging.IncludeScopes = true;
+	});
+
+	builder.Services
+		.AddOpenTelemetry()
+		.ConfigureResource(resource => resource.AddService("Updraft"))
+		.WithTracing(tracing => tracing
+			.AddAspNetCoreInstrumentation(o => o.RecordException = true)
+			.AddHttpClientInstrumentation()
+			.AddHotChocolateInstrumentation())
+		.WithMetrics(metrics => metrics
+			.AddAspNetCoreInstrumentation()
+			.AddHttpClientInstrumentation())
+		.UseOtlpExporter();
+}
 
 builder.Services
 	.AddGraphQLServer()
