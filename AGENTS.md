@@ -72,14 +72,36 @@ The following use cases should be supported by the API.
 -- Requester optionally attaches file to the request
 -- The updated Request is stored. 
 
+### View Requests
+- Role: Requester or FrontOffice
+- Action: Review a list of Requests
+- Steps:
+-- Open the list of Requests.
+-- View basic information about all Requests you can see
+-- Filter requests by status or time. See Requests with a new Job or Draft.
+- Constraints:
+-- Requesters can only see Requests they submitted. 
+-- FrontOffice users can see any Request.
+
 ### Create a job
-- Role: Front Office Staff 
+- Role: FrontOffice Staff 
 - Action: Front Office Staff reviews new requests and creates jobs to assign a request to a Drafter.
 - Steps:
--- Front Office reviews the list of Requests without Jobs.
--- Front Office selects an unassigned request and chooses "Create Job"
--- Front Office adds key information and comments to the job and selects a Drafter
--- Front Office saves the new job associated with the request. 
+-- FrontOffice reviews the list of Requests without Jobs.
+-- FrontOffice selects an unassigned request and chooses "Create Job"
+-- FrontOffice adds key information and comments to the job and selects a Drafter
+-- FrontOffice saves the new job associated with the request. 
+
+### View Jobs
+- Role: FrontOffice or Drafter
+- Action: View information on Jobs
+- Steps:
+-- Open the list of Jobs
+-- View information on Job status, including when drafts were added, but no other Draft details.
+-- Only Drafters can open a view with details about Drafts they created for a Job. 
+- Constraints:
+-- FrontOffice can see any Job.
+-- Drafters can only see Jobs assigned to them.
 
 ### Submit a draft
 - Role: Drafter 
@@ -90,6 +112,16 @@ The following use cases should be supported by the API.
 -- Drafter adds comments to the draft.
 -- Drafter selects "Send draft" and the comments and documents are saved.
 -- (Notifying the requester with a link to the new draft is out of scope for now.)
+
+### View Drafts
+- Role: Drafter
+- Action: View information about Drafts.
+- Steps:
+-- Open the list of Drafts.
+-- View details of a Draft. 
+- Constraints
+-- Drafters can only see Drafts they created.
+-- Only Drafters and the Requester can see Drafts.
 
 ### Submit a note to a request, draft or job
 - Role: Requester, Drafter or Front Office
