@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using HotChocolate;
 using HotChocolate.Authorization;
 using Updraft.Data.Entities;
@@ -11,9 +12,10 @@ public static partial class Mutation
 {
     [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     public static Task<User> RegisterCurrentUserAsync(
+        ClaimsPrincipal claimsPrincipal,
         UserService userService,
         CancellationToken cancellationToken) =>
-        userService.RegisterCurrentUserAsync(cancellationToken);
+        userService.RegisterCurrentUserAsync(claimsPrincipal, cancellationToken);
 
     [Authorize(Policy = AuthorizationPolicies.Requester)]
     [Error<OfficeNotFoundException>]

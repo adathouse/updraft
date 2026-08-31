@@ -41,7 +41,7 @@ NOTE: You must create the token before you start the service.
 
 ### Required claims
 
-`CurrentUserAccessor.GetPrincipalIdentity()` builds a `PrincipalIdentity` from the claims
+`PrincipalIdentity.FromPrincipal(...)` builds a `PrincipalIdentity` from the claims
 below. The JwtBearer handler maps the short JWT claim names to .NET `ClaimTypes` through its
 default inbound map, so the token must carry the JWT claim in the third column:
 

@@ -91,9 +91,6 @@ builder.Services.AddScoped<IRequestRepository, RequestRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<ICurrentUserAccessor, CurrentUserAccessor>();
-
 builder.Services.AddScoped<DraftService>();
 builder.Services.AddScoped<JobService>();
 builder.Services.AddScoped<NoteService>();
@@ -138,6 +135,7 @@ builder.Services
 	.AddQueryConventions()
 	.AddMutationConventions()
 	.AddGlobalObjectIdentification()
+	.AddHttpRequestInterceptor<CurrentUserRequestInterceptor>()
 	.AddUpdraftTypes();
 
 var app = builder.Build();
