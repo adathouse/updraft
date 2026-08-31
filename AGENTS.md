@@ -121,7 +121,8 @@ The following use cases should be supported by the API.
 -- View details of a Draft. 
 - Constraints
 -- Drafters can only see Drafts they created.
--- Only Drafters and the Requester can see Drafts.
+-- Requesters can only see Drafts for Requests they created. 
+-- Only Drafters and Requesters can see Drafts.
 
 ### Submit a note to a request, draft or job
 - Role: Requester, Drafter or Front Office
@@ -159,10 +160,23 @@ The following use cases should be supported by the API.
 ### View a job
 - Role: Requester, Drafter, Front Office
 - Action: view a single job with its request, drafts, attachments and notes.
+- Steps:
+-- A Drafter navigates to a list of Jobs assigned to them.
+-- A FrontOffice staffer navigates to a list of all Jobs
+-- A Requester only sees Job associated with a Request.
+- Constraints:
+-- Drafters only see Jobs assigned to them.
+-- FronOffice staff can see all Jobs.
+-- Requesters only see Jobs that are attached to their requests. 
 
 ### Browse notes and replies
 - Role: Requester, Drafter, Front Office
 - Action: view the notes attached to a request, job or draft, including threaded replies.
+- Steps:
+-- Users navigate to a detailed view for a Request, Draft or Job
+-- Users can see notes attached to the object they are viewing.
+- Constraints:
+-- Access to a Note is controlled by access to the object it is attached to. If you can see the object details you can see the Notes attached to it. 
 
 ## Data types
 
