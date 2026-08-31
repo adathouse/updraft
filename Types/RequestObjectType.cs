@@ -19,8 +19,8 @@ public static partial class RequestObjectType
 
     [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [NodeResolver]
-    public static Task<Request?> GetRequestByIdAsync(Guid id, IRequestRepository requestRepository, CancellationToken cancellationToken) =>
-        requestRepository.GetByIdAsync(id, cancellationToken);
+    public static Task<Request?> GetRequestByIdAsync(Guid id, [CurrentUser] CurrentUser? user, IRequestRepository requestRepository, CancellationToken cancellationToken) =>
+        requestRepository.Query().VisibleTo(user.OrThrow()).FirstOrDefaultAsync(x => x.RequestId == id, cancellationToken);
 
     public static Task<Job?> GetJobAsync([Parent] Request request, IJobRepository jobRepository, CancellationToken cancellationToken) =>
         jobRepository.Query().FirstOrDefaultAsync(x => x.RequestId == request.RequestId, cancellationToken);

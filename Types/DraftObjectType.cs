@@ -9,10 +9,10 @@ namespace Updraft.Types;
 [ObjectType<Draft>]
 public static partial class DraftObjectType
 {
-    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
+    [Authorize(Policy = AuthorizationPolicies.DrafterOrRequester)]
     [NodeResolver]
-    public static Task<Draft?> GetDraftByIdAsync(Guid id, IDraftRepository draftRepository, CancellationToken cancellationToken) =>
-        draftRepository.GetByIdAsync(id, cancellationToken);
+    public static Task<Draft?> GetDraftByIdAsync(Guid id, [CurrentUser] CurrentUser? user, IDraftRepository draftRepository, CancellationToken cancellationToken) =>
+        draftRepository.Query().VisibleTo(user.OrThrow()).FirstOrDefaultAsync(x => x.DraftId == id, cancellationToken);
 
     [UsePaging]
     [UseFiltering]

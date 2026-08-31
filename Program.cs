@@ -66,6 +66,12 @@ builder.Services.AddAuthorization(options =>
 		AuthorizationPolicies.DrafterOrFrontOffice,
 		policy => policy.RequireRole(RoleNames.Drafter, RoleNames.FrontOffice));
 	options.AddPolicy(
+		AuthorizationPolicies.RequesterOrFrontOffice,
+		policy => policy.RequireRole(RoleNames.Requester, RoleNames.FrontOffice));
+	options.AddPolicy(
+		AuthorizationPolicies.DrafterOrRequester,
+		policy => policy.RequireRole(RoleNames.Drafter, RoleNames.Requester));
+	options.AddPolicy(
 		AuthorizationPolicies.AnyKnownRole,
 		policy => policy.RequireRole(RoleNames.Requester, RoleNames.Drafter, RoleNames.FrontOffice));
 });
