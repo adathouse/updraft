@@ -1,106 +1,95 @@
 # AGENTS.md
 
-Instructions for AI agents working with this code base.
+Instructions for AI agents working with this codebase.
 
 ## Project
 
-Updraft is a .NET 10 GraphQL API using Hot Chocolate 16.x. 
-It uses EFCore to interface with a PostgreSQL database and Foundatio to interface with BLOB storage. 
-It uses flyway to manage the database schema. 
-Updraft provides an API for consumers to request and collaborate on draft legislation.
+Updraft is a .NET 10 API for requesting and collaborating on draft legislation. It uses:
 
-See @DATA.md for details on the data model.
+- Hot Chocolate 16.x for GraphQL.
+- EF Core with PostgreSQL for structured data.
+- Foundatio for BLOB storage.
+- Flyway for database schema and reference-data migrations.
 
-See @USE_CASES.md for details on the use cases and roles supported by this API.
+Read `DATA.md` for the domain and data contract. Read `USE_CASES.md` for supported workflows, roles, and permissions. Treat those documents as requirements; do not weaken them to match an implementation gap.
 
-## Build & Verify
+## Build and Verify
+
+Run the narrowest relevant check while iterating, then complete the applicable repository checks:
 
 ```bash
 dotnet build
-dotnet run
+dotnet test tests/Updraft.Tests/Updraft.Tests.csproj
 ```
 
-The project must build with zero warnings and zero errors before any change is considered complete.
+Use `dotnet run` when the change needs a manual API startup check. The project must build with zero warnings and zero errors before a change is complete.
 
-## Architecture
+## Architecture and Conventions
 
-- **Annotation-based types** — GraphQL types use Hot Chocolate attribute annotations (`[ObjectType<T>]`, `[QueryType]`) and static partial extension classes. Do NOT use the older `ObjectType<T>` base class pattern.
-- **Source generator** — `HotChocolate.Types.Analyzers` generates the `.AddUpdraftTypes()` extension method. All annotated types are discovered automatically; do not manually register types in `Program.cs`.
-- **Conventions** — The project uses Hot Chocolate query conventions: global object identification, cursor pagination (`[UsePaging]`), filtering (`[UseFiltering]`), and sorting (`[UseSorting]`). Apply these attributes to any new `IQueryable`-returning resolver.
-- **Service layer** — All mutations should use service classes (e.g. `RequestService`) to handle inputs and enforce business logic. 
-- **Repository layer** - Updraft uses EFCore to interface with a Postgres database. All database access should be routed through the repository layer. 
-- **BLOB storage** - Updraft uses Foundatio to interface with BLOB storage and store all files. 
-- **Database** - Updraft uses a Postgres database to store structured data. flyway manages ALL schema/DDL; EFCore is used strictly as an ORM (EF Core migrations are disabled — do not generate or apply them).
-- **Authorization** - Access is role-based using Hot Chocolate `[Authorize]` policies, enforced on every query and mutation, on the `[NodeResolver]` entry points (so global object identification cannot bypass them), and on the REST attachment upload endpoint. Policies are defined in `Security/AuthorizationPolicies.cs`: `Requester`, `Drafter`, `FrontOffice`, `DrafterOrFrontOffice`, and `AnyKnownRole`. Roles come from the authenticated user's JWT `role` claim (`RoleClaimType = ClaimTypes.Role`); Entra validation is stubbed for non-dev environments (see `Program.cs`). Annotate any new mutation, resolver, or node resolver with the appropriate policy. For local development, mint tokens with `dotnet user-jwts` (see `README.md`); the token must be created before the service starts so the signing key/audience config is loaded.
+### GraphQL and Hot Chocolate
 
-## Naming
+- Define schema fields with annotation-based static partial classes using `[QueryType]`, `[MutationType]`, and `[ObjectType<T>]`. `HotChocolate.Types.Analyzers` discovers these types and generates `AddUpdraftTypes()`; do not manually register discovered types.
+- Keep resolvers thin. Queries compose repository queries, and mutations delegate business rules and persistence to services.
+- Inject registered dependencies through resolver parameters. Register application services and repositories in `Program.cs`; do not use `[Service]` parameter attributes.
+- Return `IQueryable<T>` when filtering, sorting, projection, or pagination should execute in PostgreSQL. Do not materialize a query before Hot Chocolate data middleware runs.
+- Apply data middleware only when the field supports that capability. When combined, preserve Hot Chocolate's required order:
 
-- Avoid the name `Node` by itself — it conflicts with Hot Chocolate's Relay `Node` interface and .NET types. 
+	```csharp
+	[UsePaging]
+	[UseProjection]
+	[UseFiltering]
+	[UseSorting]
+	```
 
-## Style
+- Prefer explicit filter and sort input types for public fields when exposing every mapped entity property would reveal internal fields or create an unnecessarily broad API.
+- Use cursor pagination for unbounded collections. Ensure pagination has deterministic ordering with a unique tie-breaker so page boundaries remain stable.
+- Use DataLoaders for repeated key-based or one-to-many lookups within one GraphQL request when direct `IQueryable` composition cannot produce one database query. Do not introduce a DataLoader for a resolver that already translates efficiently to a single query.
+- Expose domain failures from mutations as typed payload errors with `[Error<TException>]`. Domain exceptions must not depend on Hot Chocolate. Reserve `GraphQLException` for GraphQL-specific technical failures that cannot be represented as domain errors.
+- Support global object identification through `AddGlobalObjectIdentification()`. Every exposed node must have an opaque global `ID` field and a `[NodeResolver]` that applies the same authorization and visibility rules as other access paths. Mark input IDs with `[ID]` or `[ID<T>]` when accepting global IDs.
+- Pass `CancellationToken` through asynchronous resolvers, services, repositories, EF Core calls, and storage operations.
 
-- Use file-scoped namespaces.
-- Use `IQueryable<T>` return types for any list resolver that should support pagination, filtering, or sorting.
-- Keep resolvers in static partial extension classes annotated with `[ObjectType<T>]`.
-- Register services in `Program.cs`; do not use `[Service]` attribute injection.
+### Authorization
 
-## Conventions
+- Use `HotChocolate.Authorization.AuthorizeAttribute`, not the ASP.NET Core attribute, on GraphQL fields. Use the Hot Chocolate `[AllowAnonymous]` attribute only for intentionally public fields.
+- Keep role and policy names in `Security/AuthorizationPolicies.cs`. Do not duplicate the policy inventory in documentation or resolver code.
+- Apply an appropriate policy to every query, mutation, and node resolver. Protect REST endpoints with ASP.NET Core endpoint authorization.
+- Role authorization is necessary but not sufficient. Apply `ResourceAccess.VisibleTo(CurrentUser)` to every query returning protected resources, including top-level fields, node resolvers, and relationship fields.
+- Resolve the registered application user once per GraphQL request through `CurrentUserRequestInterceptor` and consume it with `[CurrentUser]`. Do not use `IHttpContextAccessor` in resolvers.
+- Enforce ownership and parent-resource access again in mutation services before reading, changing, or attaching data. Client-supplied IDs are never proof of access.
+- Roles for the current request come from validated JWT role claims. Local development tokens are created with `dotnet user-jwts` as documented in `README.md`; create them before starting the service.
+- Register authorization in both pipelines: ASP.NET Core with `builder.Services.AddAuthorization(...)` and Hot Chocolate with `.AddGraphQLServer().AddAuthorization()`.
 
-### GraphQL / HotChocolate
+### Services and Repositories
 
-- Resolver classes are `internal static partial` with `[QueryType]`, `[MutationType]`, and `[ObjectType<TEntity>]`, registered through the source generator: `Properties/ModuleInfo.cs` declares `[assembly: Module("XTypes")]` and `Program.cs` calls the generated `AddXTypes()`.
-- By-id resolvers are `[NodeResolver, Lookup]`. Entities use natural keys that are plain model properties; models carry no GraphQL annotations. Each node type re-exposes its key as `id` via a `GetId` projection resolver (`[Parent(requires: ...)]`), with ID serialization inferred from the `[NodeResolver, Lookup]` resolver.
-- Every connection resolver supplies a stable order: `order.IfEmpty(...)` for the default sort plus an always-appended unique tie-breaker (for example `.AddAscending(x => x.Id)`). Paged resolvers return `PageConnection<T>` via `.With(query, order).ToPageAsync(paging, ct)`.
-- Child resolvers on `[ObjectType<T>]` classes declare parent data requirements with `[Parent(requires: ...)]`; omitting them lets projections drop the columns the resolver reads.
-- Cross-subgraph references reuse the join entity as the runtime type (for example `[ObjectType<CommitteeBill>]` renamed to `"Bill"`): the node class ignores every raw property, re-exposes the key as `id` via a `GetId` projection resolver with an explicit `[ID<T>]` (no `@shareable`; the `[Lookup, Internal]` by-id resolver emits the `@key`), and the lookup constructs the join entity carrying only the key, with the unused carrier left empty. These references declare no input types of their own: where sorting is offered, `[UseSorting]` binds the related entity's existing sort input (for example `CommitteeSortInput` on `Bill.committees`), filtering is not exposed, and connections of these references (for example `Committee.bills`) take no filter/sort arguments at all.
-- DataLoaders in all flavours must apply `.With(query.Include(x => x.Key))` so the key survives the projection.
-- Mutations contain no business logic: the resolver injects `ISender` and dispatches a command record; the handler lives in `Commands/` and throws a sealed typed domain exception with identifying properties (for example `MemberNotFoundException`, no HotChocolate dependency) for domain errors. The mutation declares each exception with `[Error<T>]` so it surfaces as a typed payload error. `GraphQLException` is reserved for unexpected technical errors.
-- Every Mocha handler must be registered through `AddMediator().AddHandler<THandler>()` in the subgraph composition setup. Nothing catches a missing registration at compile time; `SendAsync`/`QueryAsync` fails at runtime.
-- In Layered, query records carry `QueryContext<T>` and `PagingArguments` as properties and return `Page<T>` from the handler (`IQuery<Page<T>>`); the resolver relies on the implicit `Page<T>` to `PageConnection<T>` conversion.
+- Route database access through repository interfaces. Repositories expose composable queries and persistence operations; they do not contain HTTP or GraphQL concerns.
+- Put workflow validation, ownership checks, and state transitions in service classes. Mutation resolvers should only construct a command and invoke the service.
+- Use `AsNoTracking()` for read-only repository queries unless identity tracking or an update is required.
+- Keep transaction boundaries around complete business operations. Do not save partially valid state when a workflow requires multiple writes to succeed together.
+- Store files through Foundatio's `IFileStorage`. Persist only attachment metadata and storage keys in PostgreSQL.
 
-### EF Core
+### Database
 
-- One sealed `DbContext` per subgraph, primary-constructor style, model configured inline in `OnModelCreating`. No migrations: seeding calls `EnsureCreatedAsync()` and inserts only if empty.
-- Every read query uses `AsNoTracking()`.
-- Seeding is guarded by `!args.IsGraphQLCommand()` so schema-export CLI runs never touch the database.
+- Flyway owns all schema, constraints, indexes, and reference-data migrations. Never create or apply EF Core migrations and never call `EnsureCreated` for application schema management.
+- Keep EF Core mappings in `UpdraftDbContext` aligned with Flyway SQL and `DATA.md`.
+- Add database constraints for invariants that must hold regardless of the application entry point. Also validate them in services when doing so produces a useful domain error.
+- Preserve the primary-key, change-tracking, relationship, and naming rules in `DATA.md`.
 
-## Code Quality
+## Code Style
 
-### C# / .NET
-
-- Always use curly braces for loops and conditionals, no exceptions.
 - Use file-scoped namespaces and 4-space indentation.
-- Test naming: `Method_Should_Outcome_When_Condition`.
-- No vacuous assertions (`Assert.NotNull` alone is not a test).
-- If a test requires excessive stubs and reflection, you're at the wrong test tier.
-- Do not use em dash style sentences in docs, comments, or XML documentation. Use commas, periods, parentheses, or colons instead.
-- XML docs should describe the contract and concepts, not internals like pooling or iteration mechanics, and should not leak other implementation details.
-- XML docs and comments are 1-2 sentences stating the contract: what it is, what null or edge values mean. No rationale, no use-case examples, no design justification. If a sentence explains why the design is right instead of what the member promises, delete it. The same applies to docs pages: every sentence must inform the reader, none may justify the design.
-- Do not make new parameters optional just to avoid updating call sites. A parameter should only be optional when it has a sensible semantic default and the API is frequently used (where call-site brevity outweighs explicitness). If a parameter is logically required, make it required and update all call sites.
+- Always use braces for loops and conditionals.
+- Avoid the standalone type name `Node`; it conflicts with Relay and .NET types.
+- Use descriptive names. Do not make a parameter optional merely to avoid updating call sites; optional parameters require a meaningful semantic default.
+- Keep comments and XML documentation to one or two sentences that state contracts or non-obvious constraints. Do not narrate the code or justify the implementation.
+- Do not use em dash punctuation in documentation, comments, or XML documentation.
 
-### Testing
+## Testing
 
-- Prefer snapshot tests over manual `Assert` calls, use **CookieCrumble** for snapshots.
-- CookieCrumble has native snapshot support for `IExecutionResult`, `GraphQLHttpResponse`, and other core types.
-- For smaller snapshots, prefer **inline snapshots** (`MatchInlineSnapshot`) over snapshot files.
-- For a collection of results (for example a stream of subscription events), snapshot the list with `MatchInlineSnapshots` (a parallel list of per-element inline snapshots). Do NOT concatenate with `string.Join("---", values).MatchInlineSnapshot(...)`: a manual separator hides element boundaries and reinvents what the collection overload does natively.
-- For tests with multiple assertions, use **Markdown snapshots** (`MatchMarkdownSnapshot`).
-- Hard limit: a single test method must contain at most 5 `Assert.*` calls. Anything beyond that is too hard to reason about in review, switch to a snapshot (Markdown for multi-shape state, inline or file for a single output).
-- Use the AAA section marker style. Each section starts with a single-line comment, the test name documents intent, no paragraph-style block comments above sections:
+- Name tests `Method_Should_Outcome_When_Condition`.
+- Use unit tests for isolated domain logic and integration tests for GraphQL schema behavior, authorization, EF Core queries, PostgreSQL constraints, and storage integration.
+- Integration tests use `WebApplicationFactory<Program>`, signed test JWTs, and PostgreSQL. Do not replace PostgreSQL with an in-memory EF provider for behavior that depends on query translation or database constraints.
+- Authorization-sensitive fields require tests for unauthenticated, wrong-role, and permitted-role callers. Protected resources also require row-level visibility tests, including node and relationship traversal paths.
+- Test observable behavior and complete result shapes. Avoid assertions that only prove a value is non-null or that one unexpected item is absent.
+- Keep each test focused. Use arrange, act, and assert comments only when they make a multi-step test easier to scan.
+- Run focused tests during iteration and the full affected test project before completion.
 
-  ```csharp
-  // arrange
-  // optional one-line description, only when the next code is non-obvious
-  ... arrange code ...
-
-  // act
-  ... act code ...
-
-  // assert
-  ... assert code ...
-  ```
-
-- Avoid `Assert.DoesNotContain` as it is a weak assertion that easily goes out of date, it only proves something is absent without verifying what *is* present. Prefer `Assert.Equal` to check the entire string value, or `Assert.Collection` to verify the complete contents of a collection.
-- Snapshot tests: update from `__mismatch__/` directory, understand ordering issues before updating.
-- Filter tests during iteration, never run the full suite unnecessarily.
-- Use real databases (PostgreSQL) in integration tests, not mocks (unless explicitly instructed otherwise).

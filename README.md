@@ -20,8 +20,10 @@ export PGPORT=5432
 
 ## App registration
 
-The Entra app registration is used for real tokens in non-dev environments. Local
-development does not require it — see [Local development tokens](#local-development-tokens).
+The Entra app registration below is reserved for non-development authentication. Its
+Authority, Audience, and `roles` claim mapping are not enabled yet; `Program.cs` tracks
+that work as a TODO. Local development does not require Entra configuration. See
+[Local development tokens](#local-development-tokens).
 
 - name: Updraft - DEV
 - tenant: 4979d838-afe7-4f16-ac52-461bafc329ae
@@ -32,7 +34,7 @@ development does not require it — see [Local development tokens](#local-develo
 
 The API validates JWTs. For local development, mint tokens with the built-in
 [`dotnet user-jwts`](https://learn.microsoft.com/aspnet/core/security/authentication/jwt-authn)
-tool — no Entra sign-in required. The tool stores a dev signing key in user secrets and
+tool; no Entra sign-in is required. The tool stores a dev signing key in user secrets and
 writes the issuer/audience into configuration, which the JwtBearer handler validates
 against automatically. The default audience is taken from `launchSettings.json`
 (`http://0.0.0.0:5048`), so no `--audience` flag is needed.
@@ -109,7 +111,7 @@ dotnet user-jwts clear
 
 ## Running the tests
 
-Integration tests live in `tests/Updraft.Tests` and boot the API in-memory with
+Integration tests live in `tests/Updraft.Tests` and host the API in-process with
 `WebApplicationFactory`. They mint their own JWTs with a dedicated test signing key, so no
 `dotnet user-jwts` setup is required. A reachable PostgreSQL database (see
 [Connection environment](#connection-environment)) is required for the authorized-path tests.
@@ -135,27 +137,21 @@ Check migration state.
 cd flyway; flyway info
 ```
 
-## create some dummy users
-
-```
-INSERT INTO updraft.users (user_id, entra_id, name, email, roles, change_id)
-VALUES
-('2aac9785-5915-44e1-b990-c1dc6198be3e'::UUID, 'a bogus entra id', 'Lamont Sanford', 'big@dummy.com', 'Member Staff', '1527469f-64d2-4813-892d-fd7bf1e02524'::UUID),
-('68c4adf8-8d42-4849-a8d5-8afc289d3689'::UUID, 'another bougus entra id', 'Michael Stivic', 'meathead@dummy.com', 'HOLC Staff', 'f9524b14-e39e-48a2-9e8b-0e8fd470bbe0'::UUID)
-;
-```
-
-
-## sample queries and mutations
+## Sample queries and mutations
 
 The API is served at `http://localhost:5048/graphql/`. Mutations use Hot Chocolate
 mutation conventions, so every mutation takes a single `input` argument and returns a
-payload containing the entity plus an `errors` field. Replace the sample GUIDs with
-values from your own data.
+payload containing the result. Mutations configured with typed domain errors also expose
+an `errors` field. Replace the sample GUIDs with values from your own data.
+
+Every operation requires a Bearer token for a registered User. The workflow below changes
+roles between steps: use a Requester token to create the Request, a FrontOffice token to
+create the Job, and the assigned Drafter's token to submit the Draft. Use the same token
+that created the parent resource when adding or uploading its Attachment.
 
 ### Create a Request and attach a document
 
-Submit the request:
+Use a registered Requester token to submit the Request:
 
 ```graphql
 mutation SubmitRequest($input: SubmitRequestInput!) {
@@ -190,8 +186,10 @@ mutation SubmitRequest($input: SubmitRequestInput!) {
 }
 ```
 
-Create the attachment record for the returned `requestId` (use role `INTAKE_SUPPORT`,
-`PRIOR_LEGISLATION`, `POLICY_PAPER`, or `DRAFT`):
+Using the same Requester token, create the Attachment record for the returned `requestId`.
+The GraphQL enum literals are `INTAKE_SUPPORT`, `PRIOR_LEGISLATION`, `POLICY_PAPER`, and
+`DRAFT`; PostgreSQL stores the corresponding values as `IntakeSupport`,
+`PriorLegislation`, `PolicyPaper`, and `Draft`.
 
 ```graphql
 mutation AddRequestAttachment($input: AddAttachmentInput!) {
@@ -227,13 +225,15 @@ Upload the document bytes for the returned `attachmentId`. This is a plain HTTP 
 ```bash
 curl -X POST \
   "http://localhost:5048/attachments/85a6a50c-3e21-4ce6-aadb-b0335554b60e/H2821_RH_xml.pdf" \
+  -H "Authorization: Bearer <requester-token>" \
   -H "Content-Type: application/pdf" \
   --data-binary @H2821_RH_xml.pdf
 ```
 
 ### Create a Job
 
-A job assigns a request to a drafter. Supply a `requestId` and the `assigneeId` of a user:
+Use a registered FrontOffice token to create the Job. Supply the `requestId` and the
+`assigneeId` of the Drafter who will own the work:
 
 ```graphql
 mutation CreateJob($input: CreateJobInput!) {
@@ -264,7 +264,7 @@ mutation CreateJob($input: CreateJobInput!) {
 
 ### Create a Draft and attach a document
 
-Submit a draft against an open job:
+Use the registered token for the Drafter assigned to the open Job:
 
 ```graphql
 mutation SubmitDraft($input: SubmitDraftInput!) {
@@ -292,7 +292,7 @@ mutation SubmitDraft($input: SubmitDraftInput!) {
 }
 ```
 
-Add an attachment record to the returned `draftId`:
+Using the same Drafter token, add an Attachment record to the returned `draftId`:
 
 ```graphql
 mutation AddDraftAttachment($input: AddAttachmentInput!) {
@@ -327,6 +327,7 @@ Then upload the document bytes for the returned `attachmentId`:
 ```bash
 curl -X POST \
   "http://localhost:5048/attachments/ed94459a-c173-4940-ad5d-9ac038d717ca/H4348_RH_xml.pdf" \
+  -H "Authorization: Bearer <drafter-token>" \
   -H "Content-Type: application/xml" \
   --data-binary @H4348_RH_xml.pdf
 ```

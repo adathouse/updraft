@@ -1,116 +1,248 @@
-# Data modeling notes for Updraft
+# Updraft Data Contract
 
-This document contains notes about the data model and a description of the purpose of specific types and values.
+This document describes the Updraft domain and its persisted PostgreSQL schema. The Flyway migrations are the source of truth.
 
-## Data conventions
+## Domain Invariants
 
-These rules apply to every entity and schema migration.
+- A Request belongs to one Office and one Requester.
+- A Request can have zero or one Job. 
+- A Job has one assignee and can have many Drafts.
+- A Draft belongs to one Job and records the User who created it.
+- An Attachment belongs to exactly one Request or Draft.
+- A Note belongs to exactly one Request, Job, Draft, or parent Note.
+- Requests and Drafts can have many Attachments and Notes. Jobs can have many Notes.
+- Requests can be associated with many proposed Committee Offices and many Tags through join tables.
 
-- **Primary keys** — All primary keys are `GUID` (uuid) except `Tags.tag_id`, which is `TEXT`.
-- **Change tracking** — Every table has a `change_id GUID` column that is updated whenever the row changes. A full audit table is out of scope for now and will be added later.
-- **Schema ownership** — flyway owns all DDL and schema migrations. EFCore is an ORM only; EF Core migrations are not used.
-- **Polymorphic associations** — Where an entity can attach to more than one kind of parent, use a separate nullable FK column per possible parent rather than a single polymorphic column. Exactly one FK is non-null, and the non-null column identifies the parent type.
-- **Naming** — Field names in this document are written as database column names (snake_case). In C#/GraphQL these map to PascalCase via EFCore column configuration and Hot Chocolate default naming.
+## Schema Conventions
 
-## Data types
+### Ownership
 
-The following types will be needed to support the use cases.
+- Flyway owns all schema, constraint, index, and reference-data migrations.
+- EF Core maps the schema and provides data access. Do not create or apply EF Core migrations.
+- Keep this document, Flyway SQL, and `Data/UpdraftDbContext.cs` aligned.
 
-All changes are tracked with a `change_id` that is updated whenever the row is updated. 
-This allows consumers to see changes and internal services to detect changes for updates. 
-Requests are created and managed by Member Office or Committee.
-Jobs are assigned by Front Office staff and tracked and managed by Front Office staff and Drafters.
-Drafts are created and managed by Drafters based on a Request from a Member or Committee.
+### Naming and Keys
 
-### Request
-- Description: A request for a new draft from an Office, including responses to the intake questionaire.
-- Fields:
--- request_id: PK
--- office_id: FK to Office
--- proposal: TEXT
--- amending_bill: TEXT
--- reintroducing_bill: TEXT
--- related_agencies: TEXT
--- related_law: TEXT
--- proposed_committees: FK to Committee entries in Office, multiple
--- tags: FK to Tags, multiple
--- scope_response: TEXT - reponse to "What is the scope of the policy—To whom or what does it apply?"
--- administration_response: TEXT - response to "Questions of administration—Who will be responsible for carrying out the policy?"
--- enforcement_response: TEXT - response to "Questions of enforcement—What if the policy is not followed?"
--- timing_response: TEXT - response to "Questions of timing-when should the policy take effect?"
--- existing_law_response: TEXT - response to "What is the relation between the policy and existing law—Must existing law be amended to avoid conflicts with the policy?"
--- status: request workflow state, e.g. Unassigned, Assigned
--- attachments: Attachments with attached_to = this request
--- change_id: GUID, updated on every row change
+- PostgreSQL tables and columns use `snake_case`.
+- C# properties and GraphQL fields use `PascalCase` through EF Core and Hot Chocolate naming conventions.
+- Root entities use `uuid` primary keys. Lookup tables, such as `tags` may use human readable text keys.
+- `request_committees` and `request_tags` use composite primary keys.
 
-### Tags
-- Description: A lookup/authotity table that provides tags or annotations that can be associated with anything. E.g. Library of Congress Policy Areas - https://www.congress.gov/advanced-search/subject-policy-area or Legislative Subject Terms
-- Fields:
--- tag_id: TEXT, PK
--- label: TEXT
--- category: TEXT 
+### Change Tracking
 
+- Data entities have a non-null `change_id uuid` to track updates to a record. A change tracking table will be implemented later. 
+- `change_id` defaults to `gen_random_uuid()` when a row is inserted.
+- EF Core refreshes `change_id` when an `IChangeTracked` entity is added or modified. SQL executed outside EF Core must update it explicitly when required.
+- `tags`, `offices` and other lookup tables do not have change tracking.
+- Join tables such as `request_committees`, and `request_tags` do not have `change_id` columns.
+- `change_id` supports change detection. It is not a full audit history.
+
+### Multi-Parent Associations
+
+Attachments and Notes use separate nullable foreign keys for each supported parent type. A check constraint requires exactly one parent foreign key to be non-null. Do not replace these columns with a generic parent type and parent ID pair.
+
+## Entity Reference
 
 ### Office
-- Description: An Office or related entity that can request legislation. Office represents both Member Offices and Committees. Requests can be made by both types of Offices. Office is also used for the list of Committees when Committees alone are needed. Office may be extended for Executive Agencies at some point.
-- Fields:
--- office_id: PK
--- office_name: text
--- office_graph: text - key for filenames
--- office_type: Member, Committee or Caucus
--- bioguide: text - bioguide id
--- commcode: text - Committee code
--- change_id: GUID, updated on every row change
 
-### Job
-- Description: A unit of work for a Drafter that references the request and includes one or more drafts.
-- Fields:
--- job_id: GUID, PK
--- request_id: FK to request, nullable
--- assignee: GUID referencing user with the DRAFTER role
--- description: text 
--- status: job workflow state, e.g. Open, Closed
--- change_id: GUID, updated on every row change
+An Office is a Member office, Committee, Caucus, or other organizational entry that can own or be associated with a Request.
 
+| Column | Type | Null | Description |
+| --- | --- | --- | --- |
+| `office_id` | `uuid` | No | Primary key. |
+| `name` | `text` | No | Common display name. |
+| `formal_name` | `text` | No | Full formal name. |
+| `directory` | `text` | No | HOLC directory value. |
+| `office_type` | `text` | No | Office classification. |
+| `id_code` | `text` | Yes | External identifier such as a Bioguide or Committee code. |
 
-### Draft
-- Description: A draft created by a Drafter, including a comment and at least one draft document. Notes may be attached to a draft.
-- Fields:
--- draft_id: GUID, PK
--- job_id: FK to Job
--- comment: TEXT
--- attachments: Attachments with attached_to = this draft
--- change_id: GUID, updated on every row change
+Relationships:
 
-### Attachment
-- Description: A reference to a single BLOB (stored in Foundatio) associated with a request or a draft. Holds only a pointer to the file, not its contents.
-- Fields:
--- attachment_id: GUID, PK
--- request_id: FK to Request, nullable
--- draft_id: FK to Draft, nullable
--- storage_key: TEXT - Foundatio storage key for the BLOB
--- attachment_role: the purpose of the attachment, e.g. draft, prior legislation, or policy paper
--- change_id: GUID, updated on every row change
-- Note: exactly one of request_id or draft_id is non-null; the non-null column identifies the parent.
-
-### Note
-- Description: free text attached to a draft, request or job. Or, a reply to another note.
-- Fields:
--- note_id: GUID, PK
--- text: TEXT - the note body
--- request_id: FK to Request, nullable
--- job_id: FK to Job, nullable
--- draft_id: FK to Draft, nullable
--- parent_note_id: FK to Note, nullable (set when this note is a reply)
--- change_id: GUID, updated on every row change
-- Note: exactly one of request_id, job_id, draft_id or parent_note_id is non-null; the non-null column identifies the parent.
+- One Office can own many Requests through `requests.office_id`.
+- One Office can be associated with many Requests through `request_committees.office_id`.
+- Deleting an Office is restricted while either relationship exists.
 
 ### User
-- Description: various system users, distinguished by role, associated with an identity in the Entra tenant (i.e. authenitcated). Users are a proxy for an Entra identity and a foreign key reference for data that is owned by or controlled by a specific user, including Request, Job, Draft and Note. Authenication claims for each user will determine roles. 
-- Fields:
--- user_id: PK
--- entra_id: reference to the Entra entry, probably the sid
--- name: common name for the person
--- email: email address for responses
--- roles: TEXT list of roles. Maybe pull this from the JWT claims
+
+A User is the application record associated with an authenticated identity. Users can own Requests and Notes, be assigned Jobs, and create Drafts.
+
+| Column | Type | Null | Description |
+| --- | --- | --- | --- |
+| `user_id` | `uuid` | No | Primary key. |
+| `entra_id` | `text` | No | Unique stable identifier resolved from the authenticated principal. |
+| `name` | `text` | No | Display name. |
+| `email` | `text` | No | Email address. |
+| `roles` | `text` | No | Persisted role value or values recorded for the user. |
+| `change_id` | `uuid` | No | Change-detection token. |
+
+Constraints and relationships:
+
+- `entra_id` is unique.
+- Deleting a User is restricted while the User owns a Request or Note, is assigned a Job, or created a Draft.
+- Runtime authorization uses validated JWT role claims. The persisted `roles` value is not the authorization source for the current request.
+
+### Tag
+
+A Tag is an authority or lookup value used to classify Requests, such as a Library of Congress policy area or legislative subject term.
+
+| Column | Type | Null | Description |
+| --- | --- | --- | --- |
+| `tag_id` | `text` | No | Primary key. |
+| `label` | `text` | No | Display label. |
+| `category` | `text` | No | Tag authority or category. |
+| `change_id` | `uuid` | No | Change-detection token. |
+
+A Tag can be associated with many Requests through `request_tags`. Deleting a Tag is restricted while those associations exist.
+
+### Request
+
+A Request captures an Office's request for a legislative draft and its intake questionnaire responses.
+
+| Column | Type | Null | Description |
+| --- | --- | --- | --- |
+| `request_id` | `uuid` | No | Primary key. |
+| `office_id` | `uuid` | No | Foreign key to the requesting Office. |
+| `requester_id` | `uuid` | No | Foreign key to the User who owns the Request. |
+| `proposal` | `text` | Yes | Proposed policy or drafting request. |
+| `amending_bill` | `text` | Yes | Bill to amend, when applicable. |
+| `reintroducing_bill` | `text` | Yes | Bill to reintroduce, when applicable. |
+| `related_agencies` | `text` | Yes | Related agencies. |
+| `related_law` | `text` | Yes | Related law. |
+| `scope_response` | `text` | No | Scope of the proposed policy. |
+| `administration_response` | `text` | No | Responsible administering organization. |
+| `enforcement_response` | `text` | No | Consequences when the policy is not followed. |
+| `timing_response` | `text` | No | Intended effective timing. |
+| `existing_law_response` | `text` | No | Relationship to existing law. |
+| `status` | `text` | No | Workflow status: `Unassigned`, `Assigned`, or `Closed`. |
+| `change_id` | `uuid` | No | Change-detection token. |
+
+Relationships:
+
+- `office_id` uses `ON DELETE RESTRICT`.
+- `requester_id` uses `ON DELETE RESTRICT`.
+- A Request can have zero or one Job because `jobs.request_id` is unique when present.
+- A Request can have many Attachments and Notes.
+- Proposed Committees and Tags are represented by `request_committees` and `request_tags`, not columns on `requests`.
+
+Indexes exist on `office_id` and `status`.
+
+### Job
+
+A Job is a unit of drafting work assigned to a User and optionally linked to one Request.
+
+| Column | Type | Null | Description |
+| --- | --- | --- | --- |
+| `job_id` | `uuid` | No | Primary key. |
+| `request_id` | `uuid` | Yes | Foreign key to Request, unique when present. |
+| `assignee_id` | `uuid` | No | Foreign key to the assigned User. |
+| `description` | `text` | No | Description of the drafting work. |
+| `status` | `text` | No | Workflow status: `Open` or `Closed`. |
+| `change_id` | `uuid` | No | Change-detection token. |
+
+Relationships:
+
+- Deleting the linked Request sets `request_id` to null.
+- Deleting the assignee is restricted while the Job exists.
+- A Job can have many Drafts and Notes.
+
+Indexes exist on `assignee_id` and `status`.
+
+### Draft
+
+A Draft is a version of legislative text created for a Job by a User.
+
+| Column | Type | Null | Description |
+| --- | --- | --- | --- |
+| `draft_id` | `uuid` | No | Primary key. |
+| `job_id` | `uuid` | No | Foreign key to Job. |
+| `drafter_id` | `uuid` | No | Foreign key to the User who created the Draft. |
+| `comment` | `text` | No | Comment accompanying the Draft. |
+| `change_id` | `uuid` | No | Change-detection token. |
+
+Relationships:
+
+- Deleting the Job cascades to its Drafts.
+- Deleting the Drafter is restricted while the Draft exists.
+- A Draft can have many Attachments and Notes.
+
+An index exists on `job_id`.
+
+### Attachment
+
+An Attachment stores metadata for one BLOB in Foundatio storage. File content is not stored in PostgreSQL.
+
+| Column | Type | Null | Description |
+| --- | --- | --- | --- |
+| `attachment_id` | `uuid` | No | Primary key. |
+| `request_id` | `uuid` | Yes | Foreign key to Request. |
+| `draft_id` | `uuid` | Yes | Foreign key to Draft. |
+| `storage_key` | `text` | No | Foundatio storage key. |
+| `attachment_uri` | `text` | No | Application URI used to request the content. |
+| `attachment_role` | `text` | No | Role: `Draft`, `PriorLegislation`, `PolicyPaper`, or `IntakeSupport`. |
+| `change_id` | `uuid` | No | Change-detection token. |
+
+Constraints and relationships:
+
+- `ck_attachments_single_parent` requires exactly one of `request_id` and `draft_id` to be non-null.
+- `ck_attachments_role` restricts `attachment_role` to the listed values.
+- The foreign keys use PostgreSQL's default `NO ACTION` delete behavior.
+
+Indexes exist on `request_id` and `draft_id`.
+
+### Note
+
+A Note is text attached to a Request, Job, Draft, or parent Note. A Note whose parent is another Note is a reply.
+
+| Column | Type | Null | Description |
+| --- | --- | --- | --- |
+| `note_id` | `uuid` | No | Primary key. |
+| `text` | `text` | No | Note body. |
+| `owner_id` | `uuid` | Yes | Foreign key to the User who authored the Note. |
+| `request_id` | `uuid` | Yes | Foreign key to Request. |
+| `job_id` | `uuid` | Yes | Foreign key to Job. |
+| `draft_id` | `uuid` | Yes | Foreign key to Draft. |
+| `parent_note_id` | `uuid` | Yes | Foreign key to the parent Note for a reply. |
+| `change_id` | `uuid` | No | Change-detection token. |
+
+Constraints and relationships:
+
+- `ck_notes_single_parent` requires exactly one of `request_id`, `job_id`, `draft_id`, and `parent_note_id` to be non-null.
+- Deleting a Request, Job, Draft, or parent Note cascades to directly attached Notes.
+- Deleting the owner is restricted while the Note exists.
+
+Indexes exist on `request_id`, `job_id`, `draft_id`, and `parent_note_id`.
+
+### Request Committee
+
+`request_committees` associates Requests with proposed Committee Offices.
+
+| Column | Type | Null | Description |
+| --- | --- | --- | --- |
+| `request_id` | `uuid` | No | Foreign key to Request and part of the composite primary key. |
+| `office_id` | `uuid` | No | Foreign key to Office and part of the composite primary key. |
+
+Deleting a Request cascades to its associations. Deleting an Office is restricted while an association exists. An index exists on `office_id`.
+
+### Request Tag
+
+`request_tags` associates Requests with Tags.
+
+| Column | Type | Null | Description |
+| --- | --- | --- | --- |
+| `request_id` | `uuid` | No | Foreign key to Request and part of the composite primary key. |
+| `tag_id` | `text` | No | Foreign key to Tag and part of the composite primary key. |
+
+Deleting a Request cascades to its associations. Deleting a Tag is restricted while an association exists. An index exists on `tag_id`.
+
+## Enforcement Boundaries
+
+The schema enforces structural integrity, nullability, foreign keys, parent cardinality, Request and Job statuses, Attachment roles, and one Job per Request. The following rules are enforced by application workflows or remain domain expectations rather than database constraints:
+
+| Rule | Enforcement |
+| --- | --- |
+| A Job assignee has the Drafter role. | Application policy; `users.roles` is not constrained or joined by the database. |
+| A Draft includes at least one document. | Workflow expectation; the schema permits a Draft without an Attachment. |
+| A proposed Committee association references an Office whose `office_type` is `Committee`. | Application validation; the foreign key accepts any Office. |
+| `office_type` uses a supported application value. | Application mapping; the schema accepts any non-null text. |
+| A User's role text uses a supported role value or representation. | Authentication and application concern; the schema accepts any non-null text. |
 -- change_id: GUID, updated on every row change
