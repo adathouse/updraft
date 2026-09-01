@@ -9,6 +9,10 @@ It uses EFCore to interface with a PostgreSQL database and Foundatio to interfac
 It uses flyway to manage the database schema. 
 Updraft provides an API for consumers to request and collaborate on draft legislation.
 
+See @DATA.md for details on the data model.
+
+See @USE_CASES.md for details on the use cases and roles supported by this API.
+
 ## Build & Verify
 
 ```bash
@@ -33,7 +37,6 @@ The project must build with zero warnings and zero errors before any change is c
 
 - Avoid the name `Node` by itself — it conflicts with Hot Chocolate's Relay `Node` interface and .NET types. 
 
-
 ## Style
 
 - Use file-scoped namespaces.
@@ -41,242 +44,63 @@ The project must build with zero warnings and zero errors before any change is c
 - Keep resolvers in static partial extension classes annotated with `[ObjectType<T>]`.
 - Register services in `Program.cs`; do not use `[Service]` attribute injection.
 
-## Data conventions
+## Conventions
 
-These rules apply to every entity and schema migration.
+### GraphQL / HotChocolate
 
-- **Primary keys** — All primary keys are `GUID` (uuid) except `Tags.tag_id`, which is `TEXT`.
-- **Change tracking** — Every table has a `change_id GUID` column that is updated whenever the row changes. A full audit table is out of scope for now and will be added later.
-- **Schema ownership** — flyway owns all DDL and schema migrations. EFCore is an ORM only; EF Core migrations are not used.
-- **Polymorphic associations** — Where an entity can attach to more than one kind of parent, use a separate nullable FK column per possible parent rather than a single polymorphic column. Exactly one FK is non-null, and the non-null column identifies the parent type.
-- **Naming** — Field names in this document are written as database column names (snake_case). In C#/GraphQL these map to PascalCase via EFCore column configuration and Hot Chocolate default naming.
+- Resolver classes are `internal static partial` with `[QueryType]`, `[MutationType]`, and `[ObjectType<TEntity>]`, registered through the source generator: `Properties/ModuleInfo.cs` declares `[assembly: Module("XTypes")]` and `Program.cs` calls the generated `AddXTypes()`.
+- By-id resolvers are `[NodeResolver, Lookup]`. Entities use natural keys that are plain model properties; models carry no GraphQL annotations. Each node type re-exposes its key as `id` via a `GetId` projection resolver (`[Parent(requires: ...)]`), with ID serialization inferred from the `[NodeResolver, Lookup]` resolver.
+- Every connection resolver supplies a stable order: `order.IfEmpty(...)` for the default sort plus an always-appended unique tie-breaker (for example `.AddAscending(x => x.Id)`). Paged resolvers return `PageConnection<T>` via `.With(query, order).ToPageAsync(paging, ct)`.
+- Child resolvers on `[ObjectType<T>]` classes declare parent data requirements with `[Parent(requires: ...)]`; omitting them lets projections drop the columns the resolver reads.
+- Cross-subgraph references reuse the join entity as the runtime type (for example `[ObjectType<CommitteeBill>]` renamed to `"Bill"`): the node class ignores every raw property, re-exposes the key as `id` via a `GetId` projection resolver with an explicit `[ID<T>]` (no `@shareable`; the `[Lookup, Internal]` by-id resolver emits the `@key`), and the lookup constructs the join entity carrying only the key, with the unused carrier left empty. These references declare no input types of their own: where sorting is offered, `[UseSorting]` binds the related entity's existing sort input (for example `CommitteeSortInput` on `Bill.committees`), filtering is not exposed, and connections of these references (for example `Committee.bills`) take no filter/sort arguments at all.
+- DataLoaders in all flavours must apply `.With(query.Include(x => x.Key))` so the key survives the projection.
+- Mutations contain no business logic: the resolver injects `ISender` and dispatches a command record; the handler lives in `Commands/` and throws a sealed typed domain exception with identifying properties (for example `MemberNotFoundException`, no HotChocolate dependency) for domain errors. The mutation declares each exception with `[Error<T>]` so it surfaces as a typed payload error. `GraphQLException` is reserved for unexpected technical errors.
+- Every Mocha handler must be registered through `AddMediator().AddHandler<THandler>()` in the subgraph composition setup. Nothing catches a missing registration at compile time; `SendAsync`/`QueryAsync` fails at runtime.
+- In Layered, query records carry `QueryContext<T>` and `PagingArguments` as properties and return `Page<T>` from the handler (`IQuery<Page<T>>`); the resolver relies on the implicit `Page<T>` to `PageConnection<T>` conversion.
 
-## Use cases
+### EF Core
 
-The following use cases should be supported by the API.
+- One sealed `DbContext` per subgraph, primary-constructor style, model configured inline in `OnModelCreating`. No migrations: seeding calls `EnsureCreatedAsync()` and inserts only if empty.
+- Every read query uses `AsNoTracking()`.
+- Seeding is guarded by `!args.IsGraphQLCommand()` so schema-export CLI runs never touch the database.
 
-### Request a draft
-- Role: Requester (staff in a Member or Committee Office)
-- Action: Requester submits a request for new draft legislation on behalf of an Office
-- Steps:
--- Requester fills out an intake questionaire
--- Requester optionally attaches file to the request
--- the new request is stored in the the database and attachments are stored in the BLOB store for review by the Front Office
--- The status of the Request is "NEW"
+## Code Quality
 
-### Update a Request
-- Role: Requester (staff in a Member or Committee Office)
-- Action: Requester updates a draft to modify the description or update the status.
-- Steps:
--- Requester updates the description or status.
--- Requester optionally attaches file to the request
--- The updated Request is stored. 
+### C# / .NET
 
-### View Requests
-- Role: Requester or FrontOffice
-- Action: Review a list of Requests
-- Steps:
--- Open the list of Requests.
--- View basic information about all Requests you can see
--- Filter requests by status or time. See Requests with a new Job or Draft.
-- Constraints:
--- Requesters can only see Requests they submitted. 
--- FrontOffice users can see any Request.
+- Always use curly braces for loops and conditionals, no exceptions.
+- Use file-scoped namespaces and 4-space indentation.
+- Test naming: `Method_Should_Outcome_When_Condition`.
+- No vacuous assertions (`Assert.NotNull` alone is not a test).
+- If a test requires excessive stubs and reflection, you're at the wrong test tier.
+- Do not use em dash style sentences in docs, comments, or XML documentation. Use commas, periods, parentheses, or colons instead.
+- XML docs should describe the contract and concepts, not internals like pooling or iteration mechanics, and should not leak other implementation details.
+- XML docs and comments are 1-2 sentences stating the contract: what it is, what null or edge values mean. No rationale, no use-case examples, no design justification. If a sentence explains why the design is right instead of what the member promises, delete it. The same applies to docs pages: every sentence must inform the reader, none may justify the design.
+- Do not make new parameters optional just to avoid updating call sites. A parameter should only be optional when it has a sensible semantic default and the API is frequently used (where call-site brevity outweighs explicitness). If a parameter is logically required, make it required and update all call sites.
 
-### Create a job
-- Role: FrontOffice Staff 
-- Action: Front Office Staff reviews new requests and creates jobs to assign a request to a Drafter.
-- Steps:
--- FrontOffice reviews the list of Requests without Jobs.
--- FrontOffice selects an unassigned request and chooses "Create Job"
--- FrontOffice adds key information and comments to the job and selects a Drafter
--- FrontOffice saves the new job associated with the request. 
+### Testing
 
-### View Jobs
-- Role: FrontOffice or Drafter
-- Action: View information on Jobs
-- Steps:
--- Open the list of Jobs
--- View information on Job status, including when drafts were added, but no other Draft details.
--- Only Drafters can open a view with details about Drafts they created for a Job. 
-- Constraints:
--- FrontOffice can see any Job.
--- Drafters can only see Jobs assigned to them.
+- Prefer snapshot tests over manual `Assert` calls, use **CookieCrumble** for snapshots.
+- CookieCrumble has native snapshot support for `IExecutionResult`, `GraphQLHttpResponse`, and other core types.
+- For smaller snapshots, prefer **inline snapshots** (`MatchInlineSnapshot`) over snapshot files.
+- For a collection of results (for example a stream of subscription events), snapshot the list with `MatchInlineSnapshots` (a parallel list of per-element inline snapshots). Do NOT concatenate with `string.Join("---", values).MatchInlineSnapshot(...)`: a manual separator hides element boundaries and reinvents what the collection overload does natively.
+- For tests with multiple assertions, use **Markdown snapshots** (`MatchMarkdownSnapshot`).
+- Hard limit: a single test method must contain at most 5 `Assert.*` calls. Anything beyond that is too hard to reason about in review, switch to a snapshot (Markdown for multi-shape state, inline or file for a single output).
+- Use the AAA section marker style. Each section starts with a single-line comment, the test name documents intent, no paragraph-style block comments above sections:
 
-### Submit a draft
-- Role: Drafter 
-- Action: Upload a new draft document, add comments and notify the requester. 
-- Steps:
--- Drafter selects an open job and chooses "Send Draft"
--- Drafter attaches one or more documents to the job.
--- Drafter adds comments to the draft.
--- Drafter selects "Send draft" and the comments and documents are saved.
--- (Notifying the requester with a link to the new draft is out of scope for now.)
+  ```csharp
+  // arrange
+  // optional one-line description, only when the next code is non-obvious
+  ... arrange code ...
 
-### View Drafts
-- Role: Drafter
-- Action: View information about Drafts.
-- Steps:
--- Open the list of Drafts.
--- View details of a Draft. 
-- Constraints
--- Drafters can only see Drafts they created.
--- Requesters can only see Drafts for Requests they created. 
--- Only Drafters and Requesters can see Drafts.
+  // act
+  ... act code ...
 
-### Submit a note to a request, draft or job
-- Role: Requester, Drafter or Front Office
-- Action: add a note to a request, draft or job
-- Steps: 
--- Requester, Drafter or Front Office select "Add note" to a selected job, draft or request.
--- Requester, Drafter or Front Office enters text for the note.
--- Requester, Drafter or Front Office clicks "Save" and the note is saved attached to the selected job, draft or request.
+  // assert
+  ... assert code ...
+  ```
 
-
-### Reply to a note
-- Role: Requester, Drafter or Front Office
-- Action: reply to a note attached to a request, draft or job
-- Steps: 
--- Requester, Drafter or Front Office select "Reply" to a selected note.
--- Requester, Drafter or Front Office enters text for the reply.
--- Requester, Drafter or Front Office clicks "Save" and the reply is saved attached to the selected note.
-
-### List unassigned requests
-- Role: Front Office Staff
-- Action: view all Requests that do not have a Job assigned to them.
-
-### List open jobs
-- Role: Drafter, Front Office
-- Action: view jobs with an open status, filtered by assignee where appropriate.
-
-### Update a Job
-- Role: Drafter, Front Office
-- Action: Update the assignee or status of a Job.
-- Steps:
--- Select a job you own if you are a Drafter, or any Job if you are the Front Office.
--- Update the status or assignee.
--- Save the Job.
-
-### View a job
-- Role: Requester, Drafter, Front Office
-- Action: view a single job with its request, drafts, attachments and notes.
-- Steps:
--- A Drafter navigates to a list of Jobs assigned to them.
--- A FrontOffice staffer navigates to a list of all Jobs
--- A Requester only sees Job associated with a Request.
-- Constraints:
--- Drafters only see Jobs assigned to them.
--- FronOffice staff can see all Jobs.
--- Requesters only see Jobs that are attached to their requests. 
-
-### Browse notes and replies
-- Role: Requester, Drafter, Front Office
-- Action: view the notes attached to a request, job or draft, including threaded replies.
-- Steps:
--- Users navigate to a detailed view for a Request, Draft or Job
--- Users can see notes attached to the object they are viewing.
-- Constraints:
--- Access to a Note is controlled by access to the object it is attached to. If you can see the object details you can see the Notes attached to it. 
-
-## Data types
-
-The following types will be needed to support the use cases.
-
-All changes are tracked with a `change_id` that is updated whenever the row is updated. 
-This allows consumers to see changes and internal services to detect changes for updates. 
-Requests are created and managed by Member Office or Committee.
-Jobs are assigned by Front Office staff and tracked and managed by Front Office staff and Drafters.
-Drafts are created and managed by Drafters based on a Request from a Member or Committee.
-
-### Request
-- Description: A request for a new draft from an Office, including responses to the intake questionaire.
-- Fields:
--- request_id: PK
--- office_id: FK to Office
--- proposal: TEXT
--- amending_bill: TEXT
--- reintroducing_bill: TEXT
--- related_agencies: TEXT
--- related_law: TEXT
--- proposed_committees: FK to Committee entries in Office, multiple
--- tags: FK to Tags, multiple
--- scope_response: TEXT - reponse to "What is the scope of the policy—To whom or what does it apply?"
--- administration_response: TEXT - response to "Questions of administration—Who will be responsible for carrying out the policy?"
--- enforcement_response: TEXT - response to "Questions of enforcement—What if the policy is not followed?"
--- timing_response: TEXT - response to "Questions of timing-when should the policy take effect?"
--- existing_law_response: TEXT - response to "What is the relation between the policy and existing law—Must existing law be amended to avoid conflicts with the policy?"
--- status: request workflow state, e.g. Unassigned, Assigned
--- attachments: Attachments with attached_to = this request
--- change_id: GUID, updated on every row change
-
-### Tags
-- Description: A lookup/authotity table that provides tags or annotations that can be associated with anything. E.g. Library of Congress Policy Areas - https://www.congress.gov/advanced-search/subject-policy-area or Legislative Subject Terms
-- Fields:
--- tag_id: TEXT, PK
--- label: TEXT
--- category: TEXT 
-
-
-### Office
-- Description: An Office or related entity that can request legislation. Office represents both Member Offices and Committees. Requests can be made by both types of Offices. Office is also used for the list of Committees when Committees alone are needed. Office may be extended for Executive Agencies at some point.
-- Fields:
--- office_id: PK
--- office_name: text
--- office_graph: text - key for filenames
--- office_type: Member, Committee or Caucus
--- bioguide: text - bioguide id
--- commcode: text - Committee code
--- change_id: GUID, updated on every row change
-
-### Job
-- Description: A unit of work for a Drafter that references the request and includes one or more drafts.
-- Fields:
--- job_id: GUID, PK
--- request_id: FK to request, nullable
--- assignee: GUID referencing user with the DRAFTER role
--- description: text 
--- status: job workflow state, e.g. Open, Closed
--- change_id: GUID, updated on every row change
-
-
-### Draft
-- Description: A draft created by a Drafter, including a comment and at least one draft document. Notes may be attached to a draft.
-- Fields:
--- draft_id: GUID, PK
--- job_id: FK to Job
--- comment: TEXT
--- attachments: Attachments with attached_to = this draft
--- change_id: GUID, updated on every row change
-
-### Attachment
-- Description: A reference to a single BLOB (stored in Foundatio) associated with a request or a draft. Holds only a pointer to the file, not its contents.
-- Fields:
--- attachment_id: GUID, PK
--- request_id: FK to Request, nullable
--- draft_id: FK to Draft, nullable
--- storage_key: TEXT - Foundatio storage key for the BLOB
--- attachment_role: the purpose of the attachment, e.g. draft, prior legislation, or policy paper
--- change_id: GUID, updated on every row change
-- Note: exactly one of request_id or draft_id is non-null; the non-null column identifies the parent.
-
-### Note
-- Description: free text attached to a draft, request or job. Or, a reply to another note.
-- Fields:
--- note_id: GUID, PK
--- text: TEXT - the note body
--- request_id: FK to Request, nullable
--- job_id: FK to Job, nullable
--- draft_id: FK to Draft, nullable
--- parent_note_id: FK to Note, nullable (set when this note is a reply)
--- change_id: GUID, updated on every row change
-- Note: exactly one of request_id, job_id, draft_id or parent_note_id is non-null; the non-null column identifies the parent.
-
-### User
-- Description: various system users, distinguished by role, associated with an identity in the Entra tenant (i.e. authenitcated). Users are a proxy for an Entra identity and a foreign key reference for data that is owned by or controlled by a specific user, including Request, Job, Draft and Note. Authenication claims for each user will determine roles. 
-- Fields:
--- user_id: PK
--- entra_id: reference to the Entra entry, probably the sid
--- name: common name for the person
--- email: email address for responses
--- roles: TEXT list of roles. Maybe pull this from the JWT claims
--- change_id: GUID, updated on every row change
+- Avoid `Assert.DoesNotContain` as it is a weak assertion that easily goes out of date, it only proves something is absent without verifying what *is* present. Prefer `Assert.Equal` to check the entire string value, or `Assert.Collection` to verify the complete contents of a collection.
+- Snapshot tests: update from `__mismatch__/` directory, understand ordering issues before updating.
+- Filter tests during iteration, never run the full suite unnecessarily.
+- Use real databases (PostgreSQL) in integration tests, not mocks (unless explicitly instructed otherwise).
