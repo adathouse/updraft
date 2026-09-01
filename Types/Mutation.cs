@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using HotChocolate;
 using HotChocolate.Authorization;
 using Updraft.Data.Entities;
@@ -9,14 +10,19 @@ namespace Updraft.Types;
 [MutationType]
 public static partial class Mutation
 {
+    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
+    public static Task<User> RegisterCurrentUserAsync(
+        ClaimsPrincipal claimsPrincipal,
+        UserService userService,
+        CancellationToken cancellationToken) =>
+        userService.RegisterCurrentUserAsync(claimsPrincipal, cancellationToken);
+
     [Authorize(Policy = AuthorizationPolicies.Requester)]
     [Error<OfficeNotFoundException>]
     [Error<TagsNotFoundException>]
     [Error<CommitteesNotFoundException>]
-    [Error<UserNotFoundException>]
     public static Task<Request> SubmitRequestAsync(
         Guid officeId,
-        Guid requesterId,
         string? proposal,
         string? amendingBill,
         string? reintroducingBill,
@@ -29,12 +35,12 @@ public static partial class Mutation
         string existingLawResponse,
         IReadOnlyList<Guid> committeeIds,
         IReadOnlyList<string> tagIds,
+        [CurrentUser] CurrentUser? user,
         RequestService requestService,
         CancellationToken cancellationToken) =>
         requestService.CreateRequestAsync(
             new CreateRequestCommand(
                 officeId,
-                requesterId,
                 proposal,
                 amendingBill,
                 reintroducingBill,
@@ -47,10 +53,12 @@ public static partial class Mutation
                 existingLawResponse,
                 committeeIds,
                 tagIds),
+            user.OrThrow(),
             cancellationToken);
 
     [Authorize(Policy = AuthorizationPolicies.Requester)]
     [Error<RequestNotFoundException>]
+    [Error<ForbiddenAccessException>]
     public static Task<Request> UpdateRequestAsync(
         Guid requestId,
         string? proposal,
@@ -64,6 +72,7 @@ public static partial class Mutation
         string timingResponse,
         string existingLawResponse,
         RequestStatus status,
+        [CurrentUser] CurrentUser? user,
         RequestService requestService,
         CancellationToken cancellationToken) =>
         requestService.UpdateRequestAsync(
@@ -80,6 +89,7 @@ public static partial class Mutation
                 timingResponse,
                 existingLawResponse,
                 status),
+            user.OrThrow(),
             cancellationToken);
 
     [Authorize(Policy = AuthorizationPolicies.FrontOffice)]
@@ -99,32 +109,35 @@ public static partial class Mutation
     [Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
     [Error<JobNotFoundException>]
     [Error<AssigneeNotFoundException>]
+    [Error<ForbiddenAccessException>]
     public static Task<Job> UpdateJobAsync(
         Guid jobId,
         Guid assigneeId,
         string description,
         JobStatus status,
+        [CurrentUser] CurrentUser? user,
         JobService jobService,
         CancellationToken cancellationToken) =>
         jobService.UpdateJobAsync(
             new UpdateJobCommand(jobId, assigneeId, description, status),
+            user.OrThrow(),
             cancellationToken);
 
     [Authorize(Policy = AuthorizationPolicies.Drafter)]
     [Error<JobNotFoundException>]
     [Error<JobNotOpenException>]
-    [Error<UserNotFoundException>]
+    [Error<ForbiddenAccessException>]
     public static Task<Draft> SubmitDraftAsync(
         Guid jobId,
-        Guid drafterId,
         string comment,
+        [CurrentUser] CurrentUser? user,
         DraftService draftService,
         CancellationToken cancellationToken) =>
         draftService.SubmitDraftAsync(
             new SubmitDraftCommand(
                 jobId,
-                drafterId,
                 comment),
+            user.OrThrow(),
             cancellationToken);
 
     [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
@@ -132,43 +145,48 @@ public static partial class Mutation
     [Error<RequestNotFoundException>]
     [Error<JobNotFoundException>]
     [Error<DraftNotFoundException>]
-    [Error<UserNotFoundException>]
+    [Error<ForbiddenAccessException>]
     public static Task<Note> AddNoteAsync(
         string text,
-        Guid? ownerId,
         Guid? requestId,
         Guid? jobId,
         Guid? draftId,
+        [CurrentUser] CurrentUser? user,
         NoteService noteService,
         CancellationToken cancellationToken) =>
         noteService.AddNoteAsync(
-            new AddNoteCommand(text, ownerId, requestId, jobId, draftId),
+            new AddNoteCommand(text, requestId, jobId, draftId),
+            user.OrThrow(),
             cancellationToken);
 
     [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [Error<NoteNotFoundException>]
-    [Error<UserNotFoundException>]
+    [Error<ForbiddenAccessException>]
     public static Task<Note> ReplyToNoteAsync(
         Guid parentNoteId,
-        Guid? ownerId,
         string text,
+        [CurrentUser] CurrentUser? user,
         NoteService noteService,
         CancellationToken cancellationToken) =>
         noteService.ReplyToNoteAsync(
-            new ReplyToNoteCommand(parentNoteId, ownerId, text),
+            new ReplyToNoteCommand(parentNoteId, text),
+            user.OrThrow(),
             cancellationToken);
 
     [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [Error<RequestNotFoundException>]
     [Error<DraftNotFoundException>]
     [Error<InvalidAttachmentParentException>]
+    [Error<ForbiddenAccessException>]
     public static Task<Attachment> AddAttachmentAsync(
         AttachmentRole role,
         Guid? requestId,
         Guid? draftId,
+        [CurrentUser] CurrentUser? user,
         AttachmentService attachmentService,
         CancellationToken cancellationToken) =>
         attachmentService.AddAttachmentAsync(
             new AddAttachmentCommand(role, requestId, draftId),
+            user.OrThrow(),
             cancellationToken);
 }

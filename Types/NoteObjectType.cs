@@ -11,8 +11,8 @@ public static partial class NoteObjectType
 {
     [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [NodeResolver]
-    public static Task<Note?> GetNoteByIdAsync(Guid id, INoteRepository noteRepository, CancellationToken cancellationToken) =>
-        noteRepository.GetByIdAsync(id, cancellationToken);
+    public static Task<Note?> GetNoteByIdAsync(Guid id, [CurrentUser] CurrentUser? user, INoteRepository noteRepository, CancellationToken cancellationToken) =>
+        noteRepository.Query().VisibleTo(user.OrThrow()).FirstOrDefaultAsync(x => x.NoteId == id, cancellationToken);
 
     [UsePaging]
     [UseFiltering]

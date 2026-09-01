@@ -1,8 +1,10 @@
 
 
 using Foundatio.Storage;
+using Microsoft.EntityFrameworkCore;
 using Updraft.Data.Entities;
 using Updraft.Repositories;
+using Updraft.Security;
 
 namespace Updraft.Services;
 
@@ -19,12 +21,12 @@ public sealed class AttachmentService(IAttachmentRepository attachmentRepository
     IDraftRepository draftRepository,
     IFileStorage fileStorage)
 {
-    public async Task<Attachment> AddAttachmentAsync(AddAttachmentCommand command, CancellationToken cancellation)
+    public async Task<Attachment> AddAttachmentAsync(AddAttachmentCommand command, CurrentUser currentUser, CancellationToken cancellation)
     {
         await ValidateParentAsync(command.RequestId, command.DraftId, cancellation);
+        await EnsureCanAccessParentAsync(command.RequestId, command.DraftId, currentUser, cancellation);
 
         var (prefix, pathId) = ResolveParent(command.RequestId, command.DraftId);
-        // TODO: auth: check the requestor is the owner of the request/draft
         var attachmentId = Guid.NewGuid();
 
         var result = new Attachment
@@ -42,13 +44,13 @@ public sealed class AttachmentService(IAttachmentRepository attachmentRepository
         return result;
     }
 
-    public async Task<string> AttachDocumentAsync(AttachDocumentCommand command, CancellationToken cancellation)
+    public async Task<string> AttachDocumentAsync(AttachDocumentCommand command, CurrentUser currentUser, CancellationToken cancellation)
     {
         var attachment = await attachmentRepository.GetByIdAsync(command.AttachmentId, cancellation)
             ?? throw new AttachmentNotFoundException(command.AttachmentId);
 
         await ValidateParentAsync(attachment.RequestId, attachment.DraftId, cancellation);
-        // TODO: auth: check the requestor is the owner of the request/draft
+        await EnsureCanAccessParentAsync(attachment.RequestId, attachment.DraftId, currentUser, cancellation);
         var (prefix, pathId) = ResolveParent(attachment.RequestId, attachment.DraftId);
         var fileName = System.IO.Path.GetFileName(command.FileName);
         var storageKey = $"{prefix}/{pathId}/{attachment.AttachmentId}/{fileName}";
@@ -58,6 +60,21 @@ public sealed class AttachmentService(IAttachmentRepository attachmentRepository
         attachment.StorageKey = storageKey;
         await attachmentRepository.SaveChangesAsync(cancellation);
         return attachment.StorageKey;
+    }
+
+    private async Task EnsureCanAccessParentAsync(Guid? requestId, Guid? draftId, CurrentUser currentUser, CancellationToken cancellation)
+    {
+        if (requestId.HasValue
+            && !await requestRepository.Query().VisibleTo(currentUser).AnyAsync(x => x.RequestId == requestId.Value, cancellation))
+        {
+            throw new ForbiddenAccessException();
+        }
+
+        if (draftId.HasValue
+            && !await draftRepository.Query().VisibleTo(currentUser).AnyAsync(x => x.DraftId == draftId.Value, cancellation))
+        {
+            throw new ForbiddenAccessException();
+        }
     }
 
     private async Task ValidateParentAsync(Guid? requestId, Guid? draftId, CancellationToken cancellation)

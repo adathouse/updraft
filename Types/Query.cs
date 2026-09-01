@@ -8,26 +8,26 @@ namespace Updraft.Types;
 [QueryType]
 public static partial class Query
 {
-    [Authorize(Policy = AuthorizationPolicies.FrontOffice)]
+    [Authorize(Policy = AuthorizationPolicies.RequesterOrFrontOffice)]
     [UsePaging]
     [UseFiltering]
     [UseSorting]
-    public static IQueryable<Request> GetRequests(IRequestRepository requestRepository) =>
-        requestRepository.Query();
+    public static IQueryable<Request> GetRequests([CurrentUser] CurrentUser? user, IRequestRepository requestRepository) =>
+        requestRepository.Query().VisibleTo(user.OrThrow());
 
-    [Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
+    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [UsePaging]
     [UseFiltering]
     [UseSorting]
-    public static IQueryable<Job> GetJobs(IJobRepository jobRepository) =>
-        jobRepository.Query();
+    public static IQueryable<Job> GetJobs([CurrentUser] CurrentUser? user, IJobRepository jobRepository) =>
+        jobRepository.Query().VisibleTo(user.OrThrow());
 
-    [Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
+    [Authorize(Policy = AuthorizationPolicies.DrafterOrRequester)]
     [UsePaging]
     [UseFiltering]
     [UseSorting]
-    public static IQueryable<Draft> GetDrafts(IDraftRepository draftsRepository) =>
-        draftsRepository.Query();
+    public static IQueryable<Draft> GetDrafts([CurrentUser] CurrentUser? user, IDraftRepository draftsRepository) =>
+        draftsRepository.Query().VisibleTo(user.OrThrow());
 
     [Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
     [UsePaging]
@@ -48,6 +48,7 @@ public static partial class Query
     [UseFiltering]
     [UseSorting]
     public static IQueryable<Note> GetNotes(
+        [CurrentUser] CurrentUser? user,
         INoteRepository noteRepository,
         Guid? requestId,
         Guid? jobId,
@@ -60,7 +61,7 @@ public static partial class Query
             throw new InvalidOperationException("Exactly one note parent filter must be provided.");
         }
 
-        IQueryable<Note> query = noteRepository.Query();
+        IQueryable<Note> query = noteRepository.Query().VisibleTo(user.OrThrow());
 
         if (requestId.HasValue)
         {
@@ -85,6 +86,7 @@ public static partial class Query
     [UseFiltering]
     [UseSorting]
     public static IQueryable<Attachment> GetAttachments(
+       [CurrentUser] CurrentUser? user,
        IAttachmentRepository attachmentRepository,
        Guid? requestId,
        Guid? draftId)
@@ -95,14 +97,16 @@ public static partial class Query
             throw new InvalidOperationException("Exactly one note parent filter must be provided.");
         }
 
+        IQueryable<Attachment> query = attachmentRepository.Query().VisibleTo(user.OrThrow());
+
         if (requestId.HasValue)
         {
-            return attachmentRepository.Query().Where(x => x.RequestId == requestId.Value);
+            return query.Where(x => x.RequestId == requestId.Value);
         }
 
         if (draftId.HasValue)
         {
-            return attachmentRepository.Query().Where(x => x.DraftId == draftId.Value);
+            return query.Where(x => x.DraftId == draftId.Value);
         }
 
         return Enumerable.Empty<Attachment>().AsQueryable();

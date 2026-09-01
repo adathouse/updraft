@@ -13,5 +13,7 @@ public static class AuthorizationPolicies
     public const string Drafter = nameof(Drafter);
     public const string FrontOffice = nameof(FrontOffice);
     public const string DrafterOrFrontOffice = nameof(DrafterOrFrontOffice);
+    public const string RequesterOrFrontOffice = nameof(RequesterOrFrontOffice);
+    public const string DrafterOrRequester = nameof(DrafterOrRequester);
     public const string AnyKnownRole = nameof(AnyKnownRole);
 }

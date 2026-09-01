@@ -66,6 +66,12 @@ builder.Services.AddAuthorization(options =>
 		AuthorizationPolicies.DrafterOrFrontOffice,
 		policy => policy.RequireRole(RoleNames.Drafter, RoleNames.FrontOffice));
 	options.AddPolicy(
+		AuthorizationPolicies.RequesterOrFrontOffice,
+		policy => policy.RequireRole(RoleNames.Requester, RoleNames.FrontOffice));
+	options.AddPolicy(
+		AuthorizationPolicies.DrafterOrRequester,
+		policy => policy.RequireRole(RoleNames.Drafter, RoleNames.Requester));
+	options.AddPolicy(
 		AuthorizationPolicies.AnyKnownRole,
 		policy => policy.RequireRole(RoleNames.Requester, RoleNames.Drafter, RoleNames.FrontOffice));
 });
@@ -91,11 +97,14 @@ builder.Services.AddScoped<IRequestRepository, RequestRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
+builder.Services.AddScoped<ICurrentUserResolver, CurrentUserResolver>();
+
 builder.Services.AddScoped<DraftService>();
 builder.Services.AddScoped<JobService>();
 builder.Services.AddScoped<NoteService>();
 builder.Services.AddScoped<RequestService>();
 builder.Services.AddScoped<AttachmentService>();
+builder.Services.AddScoped<UserService>();
 
 // Only enable OpenTelemetry when explicitly enabled (OTEL_SDK_DISABLED=false) and an OTLP
 // endpoint is configured (OTEL_EXPORTER_OTLP_ENDPOINT); otherwise leave the integration off.
@@ -134,6 +143,7 @@ builder.Services
 	.AddQueryConventions()
 	.AddMutationConventions()
 	.AddGlobalObjectIdentification()
+	.AddHttpRequestInterceptor<CurrentUserRequestInterceptor>()
 	.AddUpdraftTypes();
 
 var app = builder.Build();
@@ -148,12 +158,16 @@ app.MapPost("/attachments/{attachmentId}/{fileName}", async (
 	HttpRequest request,
 	Guid attachmentId,
 	string fileName,
+	ClaimsPrincipal user,
+	ICurrentUserResolver currentUserResolver,
 	AttachmentService attachmentService,
 	CancellationToken cancellationToken) =>
 {
+	CurrentUser currentUser = await currentUserResolver.ResolveAsync(user, cancellationToken)
+		?? throw new UnknownUserException();
 	var contentType = request.ContentType ?? "application/octet-stream";
 	var command = new AttachDocumentCommand(attachmentId, request.Body, fileName, contentType);
-	var attachment = await attachmentService.AttachDocumentAsync(command, cancellationToken);
+	var attachment = await attachmentService.AttachDocumentAsync(command, currentUser, cancellationToken);
 	return Results.Ok(attachment);
 }).RequireAuthorization(AuthorizationPolicies.AnyKnownRole);
 

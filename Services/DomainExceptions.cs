@@ -33,6 +33,14 @@ public sealed class UserNotFoundException(Guid userId) : Exception("User was not
     public Guid UserId { get; } = userId;
 }
 
+public sealed class UnknownUserException() : Exception("The authenticated user is not registered.")
+{
+}
+
+public sealed class ForbiddenAccessException() : Exception("You do not have access to the requested resource.")
+{
+}
+
 public sealed class JobNotFoundException(Guid jobId) : Exception("Job was not found.")
 {
     public Guid JobId { get; } = jobId;
