@@ -22,7 +22,7 @@ public static partial class Mutation
     [Error<TagsNotFoundException>]
     [Error<CommitteesNotFoundException>]
     public static Task<Request> SubmitRequestAsync(
-        Guid officeId,
+        [ID<Office>] Guid officeId,
         string? proposal,
         string? amendingBill,
         string? reintroducingBill,
@@ -33,8 +33,8 @@ public static partial class Mutation
         string enforcementResponse,
         string timingResponse,
         string existingLawResponse,
-        IReadOnlyList<Guid> committeeIds,
-        IReadOnlyList<string> tagIds,
+        [ID<Office>] IReadOnlyList<Guid> committeeIds,
+        [ID<Updraft.Data.Entities.Tag>] IReadOnlyList<string> tagIds,
         [CurrentUser] CurrentUser? user,
         RequestService requestService,
         CancellationToken cancellationToken) =>
@@ -60,7 +60,7 @@ public static partial class Mutation
     [Error<RequestNotFoundException>]
     [Error<ForbiddenAccessException>]
     public static Task<Request> UpdateRequestAsync(
-        Guid requestId,
+        [ID<Request>] Guid requestId,
         string? proposal,
         string? amendingBill,
         string? reintroducingBill,
@@ -97,8 +97,8 @@ public static partial class Mutation
     [Error<RequestNotUnassignedException>]
     [Error<AssigneeNotFoundException>]
     public static Task<Job> CreateJobAsync(
-        Guid requestId,
-        Guid assigneeId,
+        [ID<Request>] Guid requestId,
+        [ID<User>] Guid assigneeId,
         string description,
         JobService jobService,
         CancellationToken cancellationToken) =>
@@ -111,8 +111,8 @@ public static partial class Mutation
     [Error<AssigneeNotFoundException>]
     [Error<ForbiddenAccessException>]
     public static Task<Job> UpdateJobAsync(
-        Guid jobId,
-        Guid assigneeId,
+        [ID<Job>] Guid jobId,
+        [ID<User>] Guid assigneeId,
         string description,
         JobStatus status,
         [CurrentUser] CurrentUser? user,
@@ -128,7 +128,7 @@ public static partial class Mutation
     [Error<JobNotOpenException>]
     [Error<ForbiddenAccessException>]
     public static Task<Draft> SubmitDraftAsync(
-        Guid jobId,
+        [ID<Job>] Guid jobId,
         string comment,
         [CurrentUser] CurrentUser? user,
         DraftService draftService,
@@ -148,9 +148,9 @@ public static partial class Mutation
     [Error<ForbiddenAccessException>]
     public static Task<Note> AddNoteAsync(
         string text,
-        Guid? requestId,
-        Guid? jobId,
-        Guid? draftId,
+        [ID<Request>] Guid? requestId,
+        [ID<Job>] Guid? jobId,
+        [ID<Draft>] Guid? draftId,
         [CurrentUser] CurrentUser? user,
         NoteService noteService,
         CancellationToken cancellationToken) =>
@@ -163,7 +163,7 @@ public static partial class Mutation
     [Error<NoteNotFoundException>]
     [Error<ForbiddenAccessException>]
     public static Task<Note> ReplyToNoteAsync(
-        Guid parentNoteId,
+        [ID<Note>] Guid parentNoteId,
         string text,
         [CurrentUser] CurrentUser? user,
         NoteService noteService,
@@ -180,8 +180,8 @@ public static partial class Mutation
     [Error<ForbiddenAccessException>]
     public static Task<Attachment> AddAttachmentAsync(
         AttachmentRole role,
-        Guid? requestId,
-        Guid? draftId,
+        [ID<Request>] Guid? requestId,
+        [ID<Draft>] Guid? draftId,
         [CurrentUser] CurrentUser? user,
         AttachmentService attachmentService,
         CancellationToken cancellationToken) =>

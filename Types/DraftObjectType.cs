@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Updraft.Data.Entities;
 using Updraft.Repositories;
 using HotChocolate.Authorization;
+using HotChocolate.Types;
 using Updraft.Security;
 
 namespace Updraft.Types;
@@ -9,6 +10,15 @@ namespace Updraft.Types;
 [ObjectType<Draft>]
 public static partial class DraftObjectType
 {
+    static partial void Configure(IObjectTypeDescriptor<Draft> descriptor)
+    {
+        // Identity and foreign keys are exposed only through the opaque node `id` and object relationships.
+        descriptor.Ignore(x => x.DraftId);
+        descriptor.Ignore(x => x.JobId);
+        descriptor.Ignore(x => x.DrafterId);
+        descriptor.Ignore(x => x.ChangeId);
+    }
+
     [Authorize(Policy = AuthorizationPolicies.DrafterOrRequester)]
     [NodeResolver]
     public static Task<Draft?> GetDraftByIdAsync(Guid id, [CurrentUser] CurrentUser? user, IDraftRepository draftRepository, CancellationToken cancellationToken) =>

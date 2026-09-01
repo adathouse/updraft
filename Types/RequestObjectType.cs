@@ -15,6 +15,11 @@ public static partial class RequestObjectType
     {
         descriptor.Ignore(x => x.RequestTags);
         descriptor.Ignore(x => x.RequestCommittees);
+        // Identity and foreign keys are exposed only through the opaque node `id` and object relationships.
+        descriptor.Ignore(x => x.RequestId);
+        descriptor.Ignore(x => x.OfficeId);
+        descriptor.Ignore(x => x.RequesterId);
+        descriptor.Ignore(x => x.ChangeId);
     }
 
     [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]

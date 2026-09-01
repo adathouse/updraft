@@ -1,6 +1,7 @@
 using Updraft.Data.Entities;
 using Updraft.Repositories;
 using HotChocolate.Authorization;
+using HotChocolate.Types;
 using Updraft.Security;
 
 namespace Updraft.Types;
@@ -8,6 +9,13 @@ namespace Updraft.Types;
 [ObjectType<User>]
 public static partial class UserObjectType
 {
+    static partial void Configure(IObjectTypeDescriptor<User> descriptor)
+    {
+        // Identity and change token are not part of the public surface.
+        descriptor.Ignore(x => x.UserId);
+        descriptor.Ignore(x => x.ChangeId);
+    }
+
     [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [NodeResolver]
     public static Task<User?> GetUserByIdAsync(Guid id, IUserRepository userRepository, CancellationToken cancellationToken) =>

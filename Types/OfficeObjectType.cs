@@ -9,8 +9,12 @@ namespace Updraft.Types;
 [ObjectType<Office>]
 public static partial class OfficeObjectType
 {
-    static partial void Configure(IObjectTypeDescriptor<Office> descriptor) =>
+    static partial void Configure(IObjectTypeDescriptor<Office> descriptor)
+    {
         descriptor.Ignore(x => x.RequestCommittees);
+        // Identity is exposed only through the opaque node `id`.
+        descriptor.Ignore(x => x.OfficeId);
+    }
 
     [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [NodeResolver]

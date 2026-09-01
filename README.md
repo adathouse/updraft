@@ -200,7 +200,6 @@ mutation AddRequestAttachment($input: AddAttachmentInput!) {
       id
       attachmentUri
       attachmentRole
-      storageKey
     }
     errors {
       __typename
@@ -304,7 +303,6 @@ mutation AddDraftAttachment($input: AddAttachmentInput!) {
       id
       attachmentUri
       attachmentRole
-      storageKey
     }
     errors {
       __typename

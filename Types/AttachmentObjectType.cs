@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Updraft.Data.Entities;
 using Updraft.Repositories;
 using HotChocolate.Authorization;
+using HotChocolate.Types;
 using Updraft.Security;
 
 namespace Updraft.Types;
@@ -9,6 +10,16 @@ namespace Updraft.Types;
 [ObjectType<Attachment>]
 public static partial class AttachmentObjectType
 {
+    static partial void Configure(IObjectTypeDescriptor<Attachment> descriptor)
+    {
+        // Identity, foreign keys, and the internal storage key are not part of the public surface.
+        descriptor.Ignore(x => x.AttachmentId);
+        descriptor.Ignore(x => x.RequestId);
+        descriptor.Ignore(x => x.DraftId);
+        descriptor.Ignore(x => x.StorageKey);
+        descriptor.Ignore(x => x.ChangeId);
+    }
+
     [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [NodeResolver]
     public static Task<Attachment?> GetAttachmentByIdAsync(Guid id, [CurrentUser] CurrentUser? user, IAttachmentRepository attachmentRepository, CancellationToken cancellationToken) =>

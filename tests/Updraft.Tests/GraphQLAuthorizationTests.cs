@@ -10,7 +10,7 @@ namespace Updraft.Tests;
 public sealed class GraphQLAuthorizationTests : IClassFixture<UpdraftWebApplicationFactory>
 {
     // FrontOffice-only query; a good probe for both authn and role enforcement.
-    private const string RequestsQuery = "{ requests { nodes { requestId } } }";
+    private const string RequestsQuery = "{ requests { nodes { id } } }";
 
     private readonly UpdraftWebApplicationFactory _factory;
 

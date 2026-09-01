@@ -10,8 +10,13 @@ namespace Updraft.Types;
 [ObjectType<EntityTag>]
 public static partial class TagObjectType
 {
-    static partial void Configure(IObjectTypeDescriptor<EntityTag> descriptor) =>
+    static partial void Configure(IObjectTypeDescriptor<EntityTag> descriptor)
+    {
         descriptor.Ignore(x => x.RequestTags);
+        // Identity and change token are not part of the public surface.
+        descriptor.Ignore(x => x.TagId);
+        descriptor.Ignore(x => x.ChangeId);
+    }
 
     [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [NodeResolver]
