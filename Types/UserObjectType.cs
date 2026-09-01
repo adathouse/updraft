@@ -12,7 +12,7 @@ public static partial class UserObjectType
     static partial void Configure(IObjectTypeDescriptor<User> descriptor)
     {
         // Identity and change token are not part of the public surface.
-        descriptor.Ignore(x => x.UserId);
+        descriptor.Field(x => x.UserId).Name("id").ID();
         descriptor.Ignore(x => x.ChangeId);
     }
 

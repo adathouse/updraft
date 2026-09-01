@@ -13,7 +13,7 @@ public static partial class AttachmentObjectType
     static partial void Configure(IObjectTypeDescriptor<Attachment> descriptor)
     {
         // Identity, foreign keys, and the internal storage key are not part of the public surface.
-        descriptor.Ignore(x => x.AttachmentId);
+        descriptor.Field(x => x.AttachmentId).Name("id").ID();
         descriptor.Ignore(x => x.RequestId);
         descriptor.Ignore(x => x.DraftId);
         descriptor.Ignore(x => x.StorageKey);
@@ -25,13 +25,13 @@ public static partial class AttachmentObjectType
     public static Task<Attachment?> GetAttachmentByIdAsync(Guid id, [CurrentUser] CurrentUser? user, IAttachmentRepository attachmentRepository, CancellationToken cancellationToken) =>
         attachmentRepository.Query().VisibleTo(user.OrThrow()).FirstOrDefaultAsync(x => x.AttachmentId == id, cancellationToken);
 
-    public static Task<Request?> GetRequestAsync([Parent] Attachment attachment, IRequestRepository requestRepository, CancellationToken cancellationToken) =>
+    public static Task<Request?> GetRequestAsync([Parent] Attachment attachment, [CurrentUser] CurrentUser? user, IRequestRepository requestRepository, CancellationToken cancellationToken) =>
         attachment.RequestId.HasValue
-            ? requestRepository.GetByIdAsync(attachment.RequestId.Value, cancellationToken)
+            ? requestRepository.Query().VisibleTo(user.OrThrow()).FirstOrDefaultAsync(x => x.RequestId == attachment.RequestId.Value, cancellationToken)
             : Task.FromResult<Request?>(null);
 
-    public static Task<Draft?> GetDraftAsync([Parent] Attachment attachment, IDraftRepository draftRepository, CancellationToken cancellationToken) =>
+    public static Task<Draft?> GetDraftAsync([Parent] Attachment attachment, [CurrentUser] CurrentUser? user, IDraftRepository draftRepository, CancellationToken cancellationToken) =>
         attachment.DraftId.HasValue
-            ? draftRepository.GetByIdAsync(attachment.DraftId.Value, cancellationToken)
+            ? draftRepository.Query().VisibleTo(user.OrThrow()).FirstOrDefaultAsync(x => x.DraftId == attachment.DraftId.Value, cancellationToken)
             : Task.FromResult<Draft?>(null);
 }

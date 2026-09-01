@@ -13,7 +13,7 @@ public static partial class OfficeObjectType
     {
         descriptor.Ignore(x => x.RequestCommittees);
         // Identity is exposed only through the opaque node `id`.
-        descriptor.Ignore(x => x.OfficeId);
+        descriptor.Field(x => x.OfficeId).Name("id").ID();
     }
 
     [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
@@ -24,6 +24,6 @@ public static partial class OfficeObjectType
     [UsePaging]
     [UseFiltering]
     [UseSorting]
-    public static IQueryable<Request> GetRequests([Parent] Office office, IRequestRepository requestRepository) =>
-        requestRepository.Query().Where(x => x.OfficeId == office.OfficeId);
+    public static IQueryable<Request> GetRequests([Parent] Office office, [CurrentUser] CurrentUser? user, IRequestRepository requestRepository) =>
+        requestRepository.Query().Where(x => x.OfficeId == office.OfficeId).VisibleTo(user.OrThrow());
 }
