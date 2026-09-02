@@ -8,7 +8,7 @@ using Updraft.Security;
 
 namespace Updraft.Types;
 
-[ObjectType<Request>()]
+[ObjectType<Request>]
 public static partial class RequestObjectType
 {
     static partial void Configure(IObjectTypeDescriptor<Request> descriptor)
