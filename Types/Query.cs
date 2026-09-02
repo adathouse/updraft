@@ -30,7 +30,7 @@ public static partial class Query
     public static IQueryable<Draft> GetDrafts([CurrentUser] CurrentUser? user, IDraftRepository draftsRepository) =>
         draftsRepository.Query().VisibleTo(user.OrThrow());
 
-    [Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
+    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [UsePaging]
     [UseFiltering]
     [UseSorting]

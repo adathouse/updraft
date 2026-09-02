@@ -41,6 +41,17 @@ This document describes the Updraft domain and its persisted PostgreSQL schema. 
 
 Attachments and Notes use separate nullable foreign keys for each supported parent type. A check constraint requires exactly one parent foreign key to be non-null. Do not replace these columns with a generic parent type and parent ID pair.
 
+### Sample Queries
+
+Get requests with the user information
+```
+SELECT request_id, proposal, requester_id, name, entra_id 
+  FROM requests 
+  LEFT JOIN users ON (user_id = requester_id);
+```
+
+
+
 ## Entity Reference
 
 ### Office
