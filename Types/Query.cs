@@ -1,3 +1,4 @@
+using HotChocolate;
 using HotChocolate.Authorization;
 using Updraft.Data.Entities;
 using Updraft.Repositories;
@@ -29,7 +30,7 @@ public static partial class Query
     public static IQueryable<Draft> GetDrafts([CurrentUser] CurrentUser? user, IDraftRepository draftsRepository) =>
         draftsRepository.Query().VisibleTo(user.OrThrow());
 
-    [Authorize(Policy = AuthorizationPolicies.DrafterOrFrontOffice)]
+    [Authorize(Policy = AuthorizationPolicies.AnyKnownRole)]
     [UsePaging]
     [UseFiltering]
     [UseSorting]
@@ -50,10 +51,10 @@ public static partial class Query
     public static IQueryable<Note> GetNotes(
         [CurrentUser] CurrentUser? user,
         INoteRepository noteRepository,
-        Guid? requestId,
-        Guid? jobId,
-        Guid? draftId,
-        Guid? parentNoteId)
+        [ID<Request>] Guid? requestId,
+        [ID<Job>] Guid? jobId,
+        [ID<Draft>] Guid? draftId,
+        [ID<Note>] Guid? parentNoteId)
     {
         int parentCount = new[] { requestId, jobId, draftId, parentNoteId }.Count(x => x.HasValue);
         if (parentCount != 1)
@@ -88,8 +89,8 @@ public static partial class Query
     public static IQueryable<Attachment> GetAttachments(
        [CurrentUser] CurrentUser? user,
        IAttachmentRepository attachmentRepository,
-       Guid? requestId,
-       Guid? draftId)
+       [ID<Request>] Guid? requestId,
+       [ID<Draft>] Guid? draftId)
     {
 
         if (requestId.HasValue && draftId.HasValue)
