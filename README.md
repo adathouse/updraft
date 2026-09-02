@@ -151,8 +151,10 @@ roles between steps: use a Requester token to create the Request, a FrontOffice 
 create the Job, and the assigned Drafter's token to submit the Draft. Use the same token
 that created the parent resource when adding or uploading its Attachment.
 
-> N.B. Make sure you use ids returned by the API. Guids don't work. 
-> The ids have special sauce that isn't easy to replicate, so start with a query.
+> N.B. Make sure you use ids returned by the API. 
+> GraphQL uses opaque global IDs that are not the same as the Guids.
+> Guids don't work. 
+> The ids have special sauce that isn't easy to replicate, so always query for the ids.
 
 ### Create a Request and attach a document
 
@@ -331,7 +333,7 @@ API:
 
 ```bash
 curl -X POST \
-  "http://localhost:5048/attachments/<attachment-id>/H4348_RH_xml.pdf" \
+  "http://localhost:5048/attachments/<attachment-guid>/H4348_RH_xml.pdf" \
   -H "Authorization: Bearer <drafter-token>" \
   -H "Content-Type: application/xml" \
   --data-binary @H4348_RH_xml.pdf

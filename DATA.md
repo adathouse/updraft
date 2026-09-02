@@ -33,7 +33,7 @@ This document describes the Updraft domain and its persisted PostgreSQL schema. 
 - Data entities have a non-null `change_id uuid` to track updates to a record. A change tracking table will be implemented later. 
 - `change_id` defaults to `gen_random_uuid()` when a row is inserted.
 - EF Core refreshes `change_id` when an `IChangeTracked` entity is added or modified. SQL executed outside EF Core must update it explicitly when required.
-- `tags`, `offices` and other lookup tables do not have change tracking.
+- Lookup tables do not have change tracking (e.g. `offices`).
 - Join tables such as `request_committees`, and `request_tags` do not have `change_id` columns.
 - `change_id` supports change detection. It is not a full audit history.
 
@@ -256,4 +256,4 @@ The schema enforces structural integrity, nullability, foreign keys, parent card
 | A proposed Committee association references an Office whose `office_type` is `Committee`. | Application validation; the foreign key accepts any Office. |
 | `office_type` uses a supported application value. | Application mapping; the schema accepts any non-null text. |
 | A User's role text uses a supported role value or representation. | Authentication and application concern; the schema accepts any non-null text. |
--- change_id: GUID, updated on every row change
+
