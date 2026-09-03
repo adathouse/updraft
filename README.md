@@ -122,6 +122,31 @@ From the repository root:
 dotnet test tests/Updraft.Tests
 ```
 
+### Database requirement
+
+The authorized-path and scenario tests run against a real PostgreSQL database; they do not
+substitute an in-memory provider. The tests expect the schema and the Flyway-seeded
+`offices` reference data to be present, so apply migrations before running them:
+
+```bash
+cd flyway; flyway migrate
+```
+
+`UpdraftWebApplicationFactory` only overrides the JWT signing key, issuer, and audience; it
+leaves the real `DbContext` and connection string intact. If PostgreSQL is unreachable or
+unmigrated, these tests fail rather than skip.
+
+### End-to-end scenario test
+
+`ScenarioWorkflowTests` exercises the full happy path (request, job, draft, attachment
+record, file upload) across the Requester, FrontOffice, and Drafter roles. It registers
+three users with stable identities, so `registerCurrentUser` is idempotent and the test is
+safe to re-run; each run creates fresh request/job/draft rows, which accumulate by design.
+
+```bash
+dotnet test tests/Updraft.Tests --filter "FullyQualifiedName~ScenarioWorkflowTests"
+```
+
 
 ## Flyway migration
 
