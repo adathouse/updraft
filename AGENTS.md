@@ -113,3 +113,33 @@ Use `dotnet run` when the change needs a manual API startup check. The project m
 - Keep each test focused. Use arrange, act, and assert comments only when they make a multi-step test easier to scan.
 - Run focused tests during iteration and the full affected test project before completion.
 
+### Integration and scenario test patterns
+
+The test project (`tests/Updraft.Tests`) provides reusable building blocks. Prefer them over
+hand-rolling HTTP plumbing in each test.
+
+- Host the API with the shared `UpdraftWebApplicationFactory`. It overrides only the Bearer
+  signing key, issuer, and audience so tests can mint valid tokens; the real PostgreSQL
+  `DbContext`, repositories, and connection string are left intact. Consume it through
+  `IClassFixture<UpdraftWebApplicationFactory>`.
+- Mint tokens with `TestTokens`. Use `Mint(roles)` for pure authorization probes, and
+  `MintFor(subject, email, roles)` when a test needs a distinct, registered user. The
+  `subject` becomes the stable `sub`/`unique_name`, matching `dotnet user-jwts --name`.
+- Issue GraphQL through `GraphQLTestClient.ExecuteAsync(query, variables, token, ct)`. Call
+  `GraphQLResult.EnsureData()` or `Select(...path)` to fail on transport-level errors, and
+  assert a mutation payload's typed `errors` field separately (see `AssertNoPayloadErrors`
+  in `ScenarioWorkflowTests`); those two error channels are distinct.
+- Register users before authorized operations. A valid JWT is not enough: call the
+  `registerCurrentUser` mutation once per identity to create the backing `users` row, then
+  reuse that token. Capture the returned global `id` when a later step needs it (for
+  example, a job assignee).
+- Always use the opaque global `id` values returned by the API for reference inputs such as
+  `officeId`, `requestId`, `jobId`, and `assigneeId`. Never construct or pass raw database
+  GUIDs; Hot Chocolate global IDs are not interchangeable with them.
+- Drive REST endpoints (such as `/attachments/{id}/{fileName}`) with the same `HttpClient`
+  from the factory and the same Bearer token. Vendor fixture files under `TestData/` and
+  resolve them with `Path.Combine(AppContext.BaseDirectory, "TestData", fileName)`.
+- Multi-role, multi-step scenarios should use stable per-role identities so registration is
+  idempotent and the test is safe to re-run. These tests tolerate accumulating request, job,
+  and draft rows rather than resetting the database.
+
